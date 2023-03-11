@@ -1,0 +1,21 @@
+[package]
+name = "gitcg-sim-web"
+version = "0.1.0"
+edition = "2021"
+description = "Web-based Genius Invokation TCG simulator"
+readme = "README.md"
+repository = ""
+license = "MIT"
+keywords = ["yew", "trunk"]
+categories = ["gui", "wasm", "web-programming"]
+
+[profile.release]
+panic = 'abort'
+codegen-units = 1
+opt-level = 3
+lto = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+yew = { version="0.20", features=["csr"] }
+gitcg_sim = { version = "0.1.0", path = "../GITCGSim", features=["wasm"] }

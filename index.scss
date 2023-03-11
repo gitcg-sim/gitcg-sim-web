@@ -1,0 +1,275 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #222;
+}
+
+main {
+  color: #fff6d5;
+  font-family: sans-serif;
+}
+
+.codebox {
+  max-width: 80em;
+  padding: 1em;
+}
+
+@mixin card {
+  border: 4px solid #FDA;
+  border-radius: 15px;
+  background: #222;
+  padding: 10px;
+  overflow: auto;
+  box-shadow: rgba(0, 0, 0, 20%) 1px 3px 11px;
+
+  opacity: 0.95;
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.board {
+  max-width: 1280px;
+  height: 700px;
+  background: radial-gradient(#3B8 20%, #4EA 140%);
+  border: 2px solid #FFA;
+  border-radius: 30px;
+  padding: 30px;
+  overflow: hidden;
+
+  display: grid;
+  grid-template-rows: 1fr minmax(20px, auto) 1fr;
+
+  > h2 {
+    display: none;
+  }
+}
+
+.divider {
+  height: auto;
+}
+
+.player-part {
+  display: grid;
+  grid-gap: 16px 8px;
+
+  &.P1 {
+    grid-template:
+      [hl] "b c d" auto [hr]
+      [ml] "a a a" 40px [mr] / 225px minmax(auto, 480px) 225px;
+  }
+
+  &.P2 {
+    grid-template:
+      [hl] "a a a" 40px [hr]
+      [ml] "b c d" auto [mr] / 225px minmax(auto, 480px) 225px;
+  }
+
+  > h3 {
+    display: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .player-hand { grid-area: a; }
+  .player-supports { grid-area: b; }
+  .player-characters { grid-area: c; }
+  .player-summons { grid-area: d; }
+}
+
+.player-hand {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 2px;
+
+  .P1 & { align-items: flex-start; }
+
+  .P2 & { align-items: flex-end; }
+
+  .card {
+    @include card;
+    width: 80px;
+    height: 60px;
+  }
+}
+
+.player-characters {
+  max-width: 460px;
+}
+
+.col, .player-characters {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  place-self: center;
+}
+
+.player-characters, .player-supports, .player-summons {
+  > h4 {
+    display: none;
+  }
+}
+
+.char-part, .summon, .support {
+  @include card;
+  width: 130px;
+  height: 170px;
+
+  > h5, > ul, > ul > li {
+    margin: 0;
+    padding: 0;
+  }
+
+  > h5 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  li {
+    list-style: none;
+  }
+}
+
+.player-summons, .player-supports {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: left;
+  padding: 4px;
+  max-width: 220px;
+}
+
+.summon, .support {
+  width: 80px;
+  height: 60px;
+  border-width: 2px;
+
+  > h5 {
+    font-size: 16px;
+  }
+}
+
+.char-part {
+  .P1 & {
+    &:not(.is-active) {
+      margin-top: 1.5em;
+    }
+
+    &.is-active {
+      margin-bottom: 1.5em;
+    }
+  }
+
+  .P2 & {
+    &:not(.is-active) {
+      margin-bottom: 1.5em;
+    }
+
+    &.is-active {
+      margin-top: 1.5em;
+    }
+  }
+
+  .char-elements {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.actions-list {
+  button {
+    padding: 4px 8px;
+    width: 100%;
+  }
+
+  td {
+    text-align: center;
+  }
+
+  .action {
+    &.action-end-round {
+      font-weight: bold;
+      color: red;
+    }
+
+    &.action-cast-skill {
+      font-weight: bold;
+      color: #06F;
+    }
+
+    &.action-play-card, &.action-elemental-tuning {
+      .card-name {
+        font-weight: bold;
+        color: #080;
+      }
+    }
+  }
+
+  .taget-char {
+      font-weight: bold;
+    color: #06A;
+  }
+}
+
+.dice {
+  height: 1rem;
+  margin: 0 4px;
+  padding: 4px;
+  border-radius: 6px;
+  text-align: center;
+  display: inline-block;
+
+  &.dice-omni {
+    background: #FCF;
+  }
+}
+
+.cost {
+  height: 1rem;
+  display: inline-block;
+  padding: 2px 4px;
+  margin: 0 2px;
+  border-radius: 4px;
+  text-align: center;
+
+  .cost-elem {
+    color: white;
+  }
+
+  .cost-aligned {
+    background: #FCF;
+    color: black;
+  }
+
+  .cost-unaligned {
+    background: #555;
+  }
+
+  .cost-energy {
+    background: #EE2;
+    color: black;
+  }
+}
+
+body {
+  --color-Anemo: #26a684;
+  --color-Geo: #B68D07;
+  --color-Electro: #9336b0;
+  --color-Dendro: #51810e;
+  --color-Hydro: #0b4dda;
+  --color-Pyro: #bf2818;
+  --color-Cryo: #4878a8;
+
+  $elems: Anemo, Geo, Electro, Dendro, Hydro, Pyro, Cryo;
+
+  @each $elem in $elems {
+    .elem-#{$elem} { background-color: var(--color-#{$elem}); }
+  }
+}
