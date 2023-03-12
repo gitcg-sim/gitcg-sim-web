@@ -1,29 +1,37 @@
+use std::rc::Rc;
+
 use gitcg_sim::{
     ids::*,
-    types::{card_defs::Status, enums::Element, game_state::*},
+    types::{card_defs::Status, enums::Element, game_state::*, nondet::StandardNondetHandlerState}, game_tree_search::GameStateWrapper,
 };
 use yew::prelude::*;
 
 #[derive(Properties)]
 pub struct BoardProps {
-    pub game_state: GameState,
+    pub game_state: Rc<GameStateWrapper<'static, StandardNondetHandlerState>>,
+    pub hash: u64
 }
 
 impl PartialEq for BoardProps {
     fn eq(&self, other: &Self) -> bool {
-        self.game_state.zobrist_hash() == other.game_state.zobrist_hash()
+        self.hash == other.hash
     }
 }
 
 #[function_component(Board)]
 pub fn board(props: &BoardProps) -> Html {
-    let hash = props.game_state.zobrist_hash();
+    let game_state = &props.game_state.game_state;
+    let count_p1 = props.game_state.nd.state.decks.0.count;
+    let count_p2 = props.game_state.nd.state.decks.1.count;
+    let hash = game_state.zobrist_hash();
     html! {
         <div class="board">
             <h2>{"Board"}</h2>
-            <PlayerPart player_state={props.game_state.players.1.clone()} player_id={PlayerId::PlayerSecond} {hash} />
+            <PlayerPart player_state={game_state.get_player(PlayerId::PlayerSecond).clone()} player_id={PlayerId::PlayerSecond} {hash} />
+            <PlayerDeck player_id={PlayerId::PlayerSecond} deck_count={count_p2} dice_count={game_state.get_player(PlayerId::PlayerSecond).dice.total()} />
             <div class="divider" />
-            <PlayerPart player_state={props.game_state.players.0.clone()} player_id={PlayerId::PlayerFirst} {hash} />
+            <PlayerPart player_state={game_state.get_player(PlayerId::PlayerFirst).clone()} player_id={PlayerId::PlayerFirst} {hash} />
+            <PlayerDeck player_id={PlayerId::PlayerFirst} deck_count={count_p1} dice_count={game_state.get_player(PlayerId::PlayerFirst).dice.total()} />
         </div>
     }
 }
@@ -38,6 +46,28 @@ pub struct PlayerPartProps {
 impl PartialEq for PlayerPartProps {
     fn eq(&self, other: &Self) -> bool {
         self.player_id == other.player_id && self.hash == other.hash
+    }
+}
+
+#[derive(Properties, PartialEq)]
+pub struct PlayerDeckProps {
+    pub player_id: PlayerId,
+    pub deck_count: u8,
+    pub dice_count: u8
+}
+
+#[function_component(PlayerDeck)]
+pub fn player_deck(props: &PlayerDeckProps) -> Html {
+    html! {
+        <div class={classes!("player-deck", props.player_id.to_string())}>
+            <h3>{"Player Deck"}</h3>
+            <div class="player-deck-card" title={format!("Cards in deck for {}", props.player_id)}>
+                {props.deck_count}
+            </div>
+            <div class="player-deck-dice" title={format!("Dice count for {}", props.player_id)}>
+                {props.dice_count}
+            </div>
+        </div>
     }
 }
 
@@ -97,7 +127,7 @@ pub fn char_part(props: &CharacterProps) -> Html {
     let char_state = &props.char_state;
     let char_card = char_state.char_id.get_char_card();
     html! {
-        <div class={classes!("char-part", if props.is_active { Some("is-active") } else { None })}>
+        <div class={classes!("char-part", if props.is_active { Some("is-active") } else { None })} title="Character Card">
             <h5>{char_card.name}</h5>
             <ul>
                 <li class="char-elements">
@@ -192,7 +222,7 @@ pub struct CardProps {
 fn card(CardProps { card_id, hidden }: &CardProps) -> Html {
     let card = card_id.get_card();
     html! {
-        <span class={"card"}>
+        <span class={"card"} title="Card">
             {if *hidden { "" } else { card.name }}
         </span>
     }
@@ -207,8 +237,8 @@ pub struct ElementProps {
 fn element(props: &ElementProps) -> Html {
     let e = props.element;
     html! {
-        <span class={format!("elem-{e:?}")}>
-            {format!("{e:?}")}
+        <span class={format!("elem-{}", e.get_name())}>
+            {e.get_name()}
         </span>
     }
 }

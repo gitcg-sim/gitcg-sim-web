@@ -19,13 +19,13 @@ pub enum AppAction {
 }
 
 pub struct AppState {
-    pub game_state: GameStateWrapper<'static, StandardNondetHandlerState>,
+    pub game_state: Rc<GameStateWrapper<'static, StandardNondetHandlerState>>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            game_state: default_game_state(),
+            game_state: Rc::new(default_game_state()),
         }
     }
 }
@@ -43,7 +43,10 @@ impl Reducible for AppState {
         match action {
             AppAction::PerformAction(action) => {
                 let mut game_state = self.game_state.clone();
-                game_state.advance(action).unwrap();
+                {
+                    let game_state = Rc::make_mut(&mut game_state);
+                    game_state.advance(action).unwrap();
+                }
                 Self { game_state }.into()
             }
         }
@@ -51,11 +54,11 @@ impl Reducible for AppState {
 }
 
 #[derive(Clone)]
-pub struct GameStateProp(pub GameState);
+pub struct GameStateProp(pub Rc<GameState>);
 
 impl GameStateProp {
     pub fn new(gs: &GameState) -> Self {
-        Self(gs.clone())
+        Self(Rc::new(gs.clone()))
     }
 }
 
@@ -98,12 +101,12 @@ pub fn app() -> Html {
         <main>
             <h1>{ "GITCGSim Web" }</h1>
             <div class="col">
-                <Board game_state={app_state.game_state.game_state.clone()} />
+                <Board game_state={app_state.game_state.clone()} hash={app_state.game_state.zobrist_hash()} />
                 <div>
-                    <h2>{"Actions"}</h2>
-                    <ActionsList app_state={app_state.clone()} />
                     <h2>{"Dice"}</h2>
                     {dice.map(|dice| html! { <DiceList {dice} /> })}
+                    <h2>{"Actions"}</h2>
+                    <ActionsList app_state={app_state.clone()} />
                 </div>
             </div>
             <div class="col">
@@ -130,8 +133,12 @@ fn dice_list(props: &DiceListProps) -> Html {
             {for props.dice.tally().iter().copied().flat_map(|(d, c)| {
                 (0..c).into_iter().map(move |_|
                     match d {
-                        Dice::Omni => html! { <span class="dice dice-omni">{"Omni"}</span> },
-                        Dice::Elem(e) => html! { <span class={format!("dice dice-elem elem-{e:?}")}>{format!("{e:?}")}</span> }
+                        Dice::Omni => html! { <span class="dice dice-omni" title={"Omni"}>{"O"}</span> },
+                        Dice::Elem(e) => html! {
+                            <span class={format!("dice dice-elem elem-{e:?}")} title={e.get_name()}>
+                                {e.get_name().chars().next()}
+                            </span>
+                        }
                     }
                 )
             })}

@@ -72,18 +72,18 @@ pub fn action_name(props: &ActionProps) -> Html {
     match props.action {
         Input::FromPlayer(_, act) => match act {
             PlayerAction::CastSkill(skill_id) => {
-                html! { <span class="action action-cast-skill">{skill_id.get_skill().name}</span> }
+                html! { <span class="action action-cast-skill" title="Cast Skill">{skill_id.get_skill().name}</span> }
             }
             PlayerAction::PlayCard(card_id, _) => {
                 html! {
-                    <span class="action action-play-card">
+                    <span class="action action-play-card" title="Play Card">
                         <span class="card-name">{card_id.get_card().name}</span>
                     </span>
                 }
             }
             PlayerAction::ElementalTuning(card_id) => {
                 html! {
-                    <span class="action action-elemental-tuning">
+                    <span class="action action-elemental-tuning" title="Elemental Tuning">
                         {"ET: "}
                         <span class="card-name">{card_id.get_card().name}</span>
                     </span>
@@ -113,7 +113,7 @@ pub fn action_target(props: &ActionProps) -> Html {
     match props.action {
         Input::FromPlayer(player_id, act) => match act {
             PlayerAction::PlayCard(_, Some(CardSelection::OwnCharacter(i))) => {
-                html! { <span class="taret-char">{get_char_name(player_id, i)}</span> }
+                html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
             }
             PlayerAction::SwitchCharacter(i) | PlayerAction::PostDeathSwitch(i) => {
                 html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
@@ -137,16 +137,16 @@ pub fn action_cost(props: &ActionProps) -> Html {
     html! {
         <span class="cost">
             {cost.elem_cost.map(|(e, c)|
-                html! { <span class={format!("cost cost-elem elem-{e:?}")}>{c}</span> }
+                html! { <span class={format!("cost cost-elem elem-{e:?}")} title="Elemental cost">{c}</span> }
             )}
             {if cost.unaligned_cost > 0 {
-                Some(html! { <span class="cost cost-unaligned">{cost.unaligned_cost}</span> })
+                Some(html! { <span class="cost cost-unaligned" title="Unaligned cost">{cost.unaligned_cost}</span> })
             } else { None }}
             {if cost.aligned_cost > 0 {
-                Some(html! { <span class="cost cost-aligned">{cost.aligned_cost}</span> })
+                Some(html! { <span class="cost cost-aligned" title="Aligned cost">{cost.aligned_cost}</span> })
             } else { None }}
             {if cost.energy_cost > 0 {
-                Some(html! { <span class="cost cost-energy">{cost.energy_cost}</span> })
+                Some(html! { <span class="cost cost-energy" title="Energy cost">{cost.energy_cost}</span> })
             } else { None }}
         </span>
     }

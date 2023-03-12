@@ -6,6 +6,7 @@ body {
 
 body {
   background: #222;
+  padding-left: 10px;
 }
 
 main {
@@ -42,15 +43,79 @@ main {
   overflow: hidden;
 
   display: grid;
+  grid-template-columns: minmax(auto, 40px) 1fr auto 1fr;
   grid-template-rows: 1fr minmax(20px, auto) 1fr;
+  grid-template-areas: "x a a a" "c d d d" "y b b b";
 
   > h2 {
     display: none;
   }
+
+  .player-deck {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .player-deck.P1 {
+    grid-area: y;
+    grid-template-rows: 10px auto 1fr auto 1fr;
+    grid-template-areas: "z" "b" "y" "a" "x";
+  }
+
+  .player-deck.P2 {
+    grid-area: x;
+    grid-template-rows: 1fr auto 1fr auto 10px;
+    grid-template-areas: "x" "a" "y" "b" "z";
+  }
+
+  .divider {
+    grid-area: d;
+    height: auto;
+  }
+
+  .player-part.P1 {
+    grid-area: b;
+  }
+
+  .player-part.P2 {
+    grid-area: a;
+  }
 }
 
-.divider {
-  height: auto;
+.player-deck {
+  > h3 {
+    display: none;
+  }
+
+  display: flex;
+  flex-direction: column;
+
+  .player-deck-card {
+    @include card;
+    grid-area: a;
+    width: 60px;
+    height: 60px;
+    margin-right: 50px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .player-deck-dice {
+    grid-area: b;
+    margin-left: 35px;
+    padding: 10px;
+    width: 20px;
+    height: 20px;
+    background: #222;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .player-part {
@@ -184,13 +249,21 @@ main {
 }
 
 .actions-list {
+  table {
+    min-width: 400px;
+
+    th, td {
+      text-align: center;
+    }
+
+    td {
+      padding: 2px 4px;
+    }
+  }
+
   button {
     padding: 4px 8px;
     width: 100%;
-  }
-
-  td {
-    text-align: center;
   }
 
   .action {
@@ -213,7 +286,7 @@ main {
   }
 
   .taget-char {
-      font-weight: bold;
+    font-weight: bold;
     color: #06A;
   }
 }
@@ -227,6 +300,7 @@ main {
   display: inline-block;
 
   &.dice-omni {
+    color: #222;
     background: #FCF;
   }
 }
