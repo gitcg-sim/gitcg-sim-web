@@ -2,6 +2,7 @@ html,
 body {
   height: 100%;
   margin: 0;
+  color: white;
 }
 
 body {
@@ -127,13 +128,13 @@ main {
   &.P1 {
     grid-template:
       [hl] "b c d" auto [hr]
-      [ml] "a a a" 40px [mr] / auto auto auto;
+      [ml] "a a a" 40px [mr] / 1fr auto 1fr;
   }
 
   &.P2 {
     grid-template:
       [hl] "a a a" 40px [hr]
-      [ml] "b c d" auto [mr] / auto auto auto;
+      [ml] "b c d" auto [mr] / 1fr auto 1fr;
   }
 
   > h3 {
