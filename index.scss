@@ -7,6 +7,7 @@ body {
 body {
   background: #222;
   padding-left: 10px;
+  font-size: 12pt;
 }
 
 main {
@@ -34,9 +35,10 @@ main {
 }
 
 .board {
-  max-width: 1280px;
-  height: 700px;
-  background: radial-gradient(#3B8 20%, #4EA 140%);
+  width: 100%;
+  max-width: 1100px;
+  height: 780px;
+  background: radial-gradient(#4B8 20%, #286 140%);
   border: 2px solid #FFA;
   border-radius: 30px;
   padding: 30px;
@@ -125,13 +127,13 @@ main {
   &.P1 {
     grid-template:
       [hl] "b c d" auto [hr]
-      [ml] "a a a" 40px [mr] / 225px minmax(auto, 480px) 225px;
+      [ml] "a a a" 40px [mr] / auto auto auto;
   }
 
   &.P2 {
     grid-template:
       [hl] "a a a" 40px [hr]
-      [ml] "b c d" auto [mr] / 225px minmax(auto, 480px) 225px;
+      [ml] "b c d" auto [mr] / auto auto auto;
   }
 
   > h3 {
@@ -144,6 +146,29 @@ main {
   .player-supports { grid-area: b; }
   .player-characters { grid-area: c; }
   .player-summons { grid-area: d; }
+
+  .player-summons, .player-supports {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: left;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 20px 4px;
+    width: 100%;
+    min-width: 120px;
+    max-width: 220px;
+  }
+
+  .player-characters {
+    width: 100%;
+    min-width: 480px;
+    max-width: 550px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    place-self: center;
+  }
 }
 
 .player-hand {
@@ -163,11 +188,7 @@ main {
   }
 }
 
-.player-characters {
-  max-width: 460px;
-}
-
-.col, .player-characters {
+.col {
   display: flex;
   flex-direction: row;
   gap: 10px;
@@ -180,10 +201,10 @@ main {
   }
 }
 
-.char-part, .summon, .support {
+.char-card, .summon, .support {
   @include card;
-  width: 130px;
-  height: 170px;
+  width: 100%;
+  max-width: 180px;
 
   > h5, > ul, > ul > li {
     margin: 0;
@@ -200,16 +221,6 @@ main {
   }
 }
 
-.player-summons, .player-supports {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: left;
-  padding: 4px;
-  max-width: 220px;
-}
-
 .summon, .support {
   width: 80px;
   height: 60px;
@@ -220,7 +231,15 @@ main {
   }
 }
 
-.char-part {
+.char-card {
+  min-height: 100px;
+  height: 180px;
+
+  &.is-dead {
+    border-color: #C00;
+    opacity: 0.9;
+  }
+
   .P1 & {
     &:not(.is-active) {
       margin-top: 1.5em;
@@ -241,10 +260,33 @@ main {
     }
   }
 
+  .char-statuses {
+    &, & > hr {
+      border-width: 0px;
+      border-top: 1px dashed #AAA;
+    }
+    margin-top: 8px;
+    padding-top: 8px;
+    font-size: 10pt;
+  }
+
   .char-elements {
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  ul, li {
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    list-style: none;
+  }
+
+  h6 {
+    display: none;
   }
 }
 
@@ -258,6 +300,10 @@ main {
 
     td {
       padding: 2px 4px;
+    }
+
+    td:nth-child(2) {
+      min-width: 240px;
     }
   }
 
@@ -285,9 +331,9 @@ main {
     }
   }
 
-  .taget-char {
+  .target-char {
     font-weight: bold;
-    color: #06A;
+    color: #FE6;
   }
 }
 
@@ -312,6 +358,10 @@ main {
   margin: 0 2px;
   border-radius: 4px;
   text-align: center;
+
+  &.cost-zero {
+    opacity: 0.6;
+  }
 
   .cost-elem {
     color: white;

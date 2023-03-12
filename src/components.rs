@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gitcg_sim::{
     ids::*,
-    types::{card_defs::Status, enums::Element, game_state::*, nondet::StandardNondetHandlerState}, game_tree_search::GameStateWrapper,
+    types::{card_defs::Status, enums::{Element, EquipSlot}, game_state::*, nondet::StandardNondetHandlerState}, game_tree_search::GameStateWrapper,
 };
 use yew::prelude::*;
 
@@ -73,7 +73,7 @@ pub fn player_deck(props: &PlayerDeckProps) -> Html {
 
 #[function_component(PlayerPart)]
 pub fn player_part(props: &PlayerPartProps) -> Html {
-    let player_state = &props.player_state;
+    let PlayerPartProps { player_state, hash, .. } = props;
     let chars = &player_state.char_states;
     let active = player_state.active_char_index;
     let summons = player_state.status_collection.summon_statuses_vec();
@@ -90,8 +90,31 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
             </div>
             <div class="player-characters">
                 <h4>{"Characters"}</h4>
-                {for chars.iter().enumerate().map(|(i, c)| html!{
-                    <Character is_active={(i as u8) == active} char_state={c.clone()} hash={props.hash} />
+                {for chars.iter().enumerate().map(|(i, c)| {
+                    let is_active = (i as u8) == active;
+                    let equip_statuses: Vec<(EquipSlot, StatusId, AppliedEffectState)> = player_state
+                        .status_collection
+                        .equipment_statuses_vec(i as u8)
+                        .iter()
+                        .copied()
+                        .map(|(slot, status, state)| (slot, status, *state))
+                        .collect();
+                    let char_statuses: Vec<StatusEntry> = player_state.status_collection.character_statuses_vec(i as u8)
+                        .iter().copied().copied().collect();
+                    let team_statuses: Vec<StatusEntry> = if is_active {
+                        player_state.status_collection.team_statuses_vec()
+                            .iter().copied().copied().collect()
+                    } else { vec![] };
+                    html! {
+                        <Character
+                            char_state={c.clone()}
+                            {is_active}
+                            {equip_statuses}
+                            {char_statuses}
+                            {team_statuses}
+                            {hash}
+                        />
+                    }
                 })}
             </div>
             <div class="player-summons">
@@ -113,6 +136,9 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
 pub struct CharacterProps {
     pub is_active: bool,
     pub char_state: CharState,
+    pub equip_statuses: Vec<(EquipSlot, StatusId, AppliedEffectState)>,
+    pub char_statuses: Vec<StatusEntry>,
+    pub team_statuses: Vec<StatusEntry>,
     pub hash: u64,
 }
 
@@ -126,8 +152,22 @@ impl PartialEq for CharacterProps {
 pub fn char_part(props: &CharacterProps) -> Html {
     let char_state = &props.char_state;
     let char_card = char_state.char_id.get_char_card();
+    let is_dead = char_state.get_hp() == 0;
+    let status_line = |class: &'static str, status: &'static Status, state: AppliedEffectState| {
+        html! {
+            <li class={class}>
+                {status.name}
+                {" "}
+                <StatusInfo {status} {state} compact={true} />
+            </li>
+        }
+    };
     html! {
-        <div class={classes!("char-part", if props.is_active { Some("is-active") } else { None })} title="Character Card">
+        <div class={classes!(
+            "char-card",
+            if props.is_active { Some("is-active") } else { None },
+            if is_dead { Some("is-dead") } else { None })
+        } title="Character Card">
             <h5>{char_card.name}</h5>
             <ul>
                 <li class="char-elements">
@@ -137,6 +177,49 @@ pub fn char_part(props: &CharacterProps) -> Html {
                 </li>
                 <li>{format!("HP: {}/{}", char_state.get_hp(), char_card.max_health)}</li>
                 <li>{format!("Energy: {}/{}", char_state.get_energy(), char_card.max_energy)}</li>
+                {
+                    if !is_dead {
+                        html! {
+                            <li>
+                                <div class="char-statuses">
+                                    <h6>{"Statuses:"}</h6>
+                                    <ul>
+                                        {for props.equip_statuses.iter().copied().map(|(slot, status_id, state)| {
+                                            let status = status_id.get_status();
+                                            html! {
+                                                <li class={format!("status-equip equip-slot-{slot:?}")}>
+                                                    {format!("{:?}: ", slot)}
+                                                    {status.name}
+                                                    {" "}
+                                                    <StatusInfo {status} {state} compact={true} />
+                                                </li>
+                                            }
+                                        })}
+                                        {for props.char_statuses.iter().map(|s| {
+                                            if let Some(status) = s.status_id().map(|s| s.get_status()) {
+                                                status_line("char-status", status, s.state)
+                                            } else {
+                                                html! { }
+                                            }
+                                        })}
+                                    </ul>
+                                    <hr />
+                                    <ul>
+                                        {for props.team_statuses.iter().map(|s| {
+                                            if let Some(status) = s.status_id().map(|s| s.get_status()) {
+                                                status_line("team-status", status, s.state)
+                                            } else {
+                                                html! { }
+                                            }
+                                        })}
+                                    </ul>
+                                </div>
+                            </li>
+                        }
+                    } else {
+                        html! {}
+                    }
+                }
             </ul>
         </div>
     }
@@ -186,6 +269,8 @@ fn support_part(props: &SupportProps) -> Html {
 pub struct StatusInfoProps {
     pub status: &'static Status,
     pub state: AppliedEffectState,
+    #[prop_or_default]
+    pub compact: bool,
 }
 
 impl PartialEq for StatusInfoProps {
@@ -195,19 +280,29 @@ impl PartialEq for StatusInfoProps {
 }
 
 #[function_component(StatusInfo)]
-fn status_info(StatusInfoProps { status, state }: &StatusInfoProps) -> Html {
-    html! {
-        <ul>
-            {
-                if status.usages.is_some() {
-                    html!{ <li>{format!("Usages: {}", state.get_usages())}</li> }
-                } else if status.duration_rounds.is_some() {
-                    html!{ <li>{format!("Duration: {}", state.get_usages())}</li> }
-                } else {
-                    html!{}
+fn status_info(StatusInfoProps { status, state, compact }: &StatusInfoProps) -> Html {
+    if *compact {
+        if status.usages.is_some() {
+            html!{ {format!("({})", state.get_usages())} }
+        } else if status.duration_rounds.is_some() {
+            html!{ {format!("({})", state.get_duration())} }
+        } else {
+            html!{}
+        }
+    } else {
+        html! {
+            <div>
+                {
+                    if status.usages.is_some() {
+                        html!{ <span>{format!("Usages: {}", state.get_usages())}</span> }
+                    } else if status.duration_rounds.is_some() {
+                        html!{ <span>{format!("Duration: {}", state.get_duration())}</span> }
+                    } else {
+                        html!{}
+                    }
                 }
-            }
-        </ul>
+            </div>
+        }
     }
 }
 
@@ -222,7 +317,7 @@ pub struct CardProps {
 fn card(CardProps { card_id, hidden }: &CardProps) -> Html {
     let card = card_id.get_card();
     html! {
-        <span class={"card"} title="Card">
+        <span class="card" title="Card">
             {if *hidden { "" } else { card.name }}
         </span>
     }

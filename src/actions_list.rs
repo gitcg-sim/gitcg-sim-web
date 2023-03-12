@@ -24,6 +24,11 @@ pub fn actions_list(props: &ActionsListProps) -> Html {
             app_state.dispatch(AppAction::PerformAction(action));
         })
     };
+    if let Some(winner) = app_state.game_state.winner() {
+        return html! {
+            <div class="winner-decided"><p>{"Winner decided: "}{format!("{}", winner)}</p></div>
+        }
+    }
     let acts = app_state.game_state.actions();
     html! {
         <div class="actions-list">
@@ -134,10 +139,23 @@ pub fn action_target(props: &ActionProps) -> Html {
 pub fn action_cost(props: &ActionProps) -> Html {
     let game_state = &props.game_state.0;
     let cost = game_state.action_info(props.action).0;
+    if cost.total_dice() == 0 {
+        return html! {
+            <span class="cost cost-zero">
+                <span class="cost cost-aligned" title="Zero cost">{"0"}</span>
+            </span>
+        }
+    }
+
     html! {
         <span class="cost">
             {cost.elem_cost.map(|(e, c)|
-                html! { <span class={format!("cost cost-elem elem-{e:?}")} title="Elemental cost">{c}</span> }
+                html! {
+                    <span
+                        class={format!("cost cost-elem elem-{}", e.get_name())}
+                        title={format!("Elemental cost: {}", e.get_name())}
+                    >{c}</span>
+                }
             )}
             {if cost.unaligned_cost > 0 {
                 Some(html! { <span class="cost cost-unaligned" title="Unaligned cost">{cost.unaligned_cost}</span> })
