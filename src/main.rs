@@ -1,3 +1,5 @@
+mod search;
+
 mod components;
 
 mod actions_list;

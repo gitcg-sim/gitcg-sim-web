@@ -1,4 +1,3 @@
-
 use gitcg_sim::{
     game_tree_search::*,
     ids::*,
@@ -6,9 +5,7 @@ use gitcg_sim::{
 };
 use yew::prelude::*;
 
-use crate::{
-    app::{AppAction, AppState, GameStateProp}
-};
+use crate::app::{AppAction, AppState, GameStateProp};
 
 #[derive(Properties, PartialEq)]
 pub struct ActionsListProps {
@@ -27,7 +24,7 @@ pub fn actions_list(props: &ActionsListProps) -> Html {
     if let Some(winner) = app_state.game_state.winner() {
         return html! {
             <div class="winner-decided"><p>{"Winner decided: "}{format!("{}", winner)}</p></div>
-        }
+        };
     }
     let acts = app_state.game_state.actions();
     html! {
@@ -134,7 +131,6 @@ pub fn action_target(props: &ActionProps) -> Html {
     }
 }
 
-
 #[function_component(ActionCost)]
 pub fn action_cost(props: &ActionProps) -> Html {
     let game_state = &props.game_state.0;
@@ -144,7 +140,7 @@ pub fn action_cost(props: &ActionProps) -> Html {
             <span class="cost cost-zero">
                 <span class="cost cost-aligned" title="Zero cost">{"0"}</span>
             </span>
-        }
+        };
     }
 
     html! {

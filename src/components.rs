@@ -1,15 +1,21 @@
 use std::rc::Rc;
 
 use gitcg_sim::{
+    game_tree_search::GameStateWrapper,
     ids::*,
-    types::{card_defs::Status, enums::{Element, EquipSlot}, game_state::*, nondet::StandardNondetHandlerState}, game_tree_search::GameStateWrapper,
+    types::{
+        card_defs::Status,
+        enums::{Element, EquipSlot},
+        game_state::*,
+        nondet::StandardNondetHandlerState,
+    },
 };
 use yew::prelude::*;
 
 #[derive(Properties)]
 pub struct BoardProps {
     pub game_state: Rc<GameStateWrapper<'static, StandardNondetHandlerState>>,
-    pub hash: u64
+    pub hash: u64,
 }
 
 impl PartialEq for BoardProps {
@@ -53,7 +59,7 @@ impl PartialEq for PlayerPartProps {
 pub struct PlayerDeckProps {
     pub player_id: PlayerId,
     pub deck_count: u8,
-    pub dice_count: u8
+    pub dice_count: u8,
 }
 
 #[function_component(PlayerDeck)]
@@ -73,7 +79,9 @@ pub fn player_deck(props: &PlayerDeckProps) -> Html {
 
 #[function_component(PlayerPart)]
 pub fn player_part(props: &PlayerPartProps) -> Html {
-    let PlayerPartProps { player_state, hash, .. } = props;
+    let PlayerPartProps {
+        player_state, hash, ..
+    } = props;
     let chars = &player_state.char_states;
     let active = player_state.active_char_index;
     let summons = player_state.status_collection.summon_statuses_vec();
@@ -280,14 +288,20 @@ impl PartialEq for StatusInfoProps {
 }
 
 #[function_component(StatusInfo)]
-fn status_info(StatusInfoProps { status, state, compact }: &StatusInfoProps) -> Html {
+fn status_info(
+    StatusInfoProps {
+        status,
+        state,
+        compact,
+    }: &StatusInfoProps,
+) -> Html {
     if *compact {
         if status.usages.is_some() {
-            html!{ {format!("({})", state.get_usages())} }
+            html! { {format!("({})", state.get_usages())} }
         } else if status.duration_rounds.is_some() {
-            html!{ {format!("({})", state.get_duration())} }
+            html! { {format!("({})", state.get_duration())} }
         } else {
-            html!{}
+            html! {}
         }
     } else {
         html! {

@@ -1,32 +1,33 @@
-use std::{ops::Deref, rc::Rc, cell::RefCell, borrow::Borrow};
+use std::{ops::Deref, rc::Rc};
 
 use gitcg_sim::{
     deck::*,
     game_tree_search::{*, Game},
+    mcts::*,
     ids::*,
-    types::{game_state::*, input::*, nondet::*, dice_counter::DiceCounter, enums::Dice}, mcts::{MCTSConfig, MCTS},
+    types::{by_player::*, game_state::*, input::*, nondet::*, dice_counter::*, enums::*},
 };
 use gitcg_sim::{rand::prelude::*, smallvec::smallvec};
 use yew::prelude::*;
 
-use crate::actions_list::*;
+use crate::{actions_list::*, search::*};
 use crate::components::*;
 
 const NDH: StandardNondetHandler = StandardNondetHandler();
 
+pub type G = GameStateWrapper<'static, StandardNondetHandlerState>;
+
 pub enum AppAction {
     PerformAction(Input),
     RunSearch(PlayerId),
+    DispatchSearch(PlayerId, SearchAction<G>),
     SetMessage(String),
 }
-
-pub type G = GameStateWrapper<'static, StandardNondetHandlerState>;
 
 #[derive(Clone)]
 pub struct AppState {
     pub game_state: Rc<G>,
-    pub search: Rc<RefCell<MCTS<G>>>,
-    pub search_solution: Option<SearchResult<G>>,
+    pub search: ByPlayer<Rc<SearchState<G>>>,
     pub message: String,
 }
 
@@ -46,8 +47,10 @@ impl Default for AppState {
         );
         Self {
             game_state: Rc::new(game_state),
-            search: Rc::new(RefCell::new(MCTS::new(config))),
-            search_solution: Default::default(),
+            search: (
+                Rc::new(SearchState::new(MCTS::new(config))),
+                Rc::new(SearchState::new(MCTS::new(config)))
+            ).into(),
             message: Default::default(),
         }
     }
@@ -68,18 +71,29 @@ impl Reducible for AppState {
             AppAction::SetMessage(message) => {
                 next.message = message;
             },
-            AppAction::PerformAction(action) => {
-                let game_state = Rc::make_mut(&mut next.game_state);
+            AppAction::PerformAction(action) => 'a: {
+                let Some(player_id) = action.player() else {
+                    break 'a
+                };
+                let mut game_state: G = self.game_state.clone().deref().clone();
                 if let Err(e) = game_state.advance(action) {
                     println!("reduce: Error: {e:?}")
                 } else {
-                    next.search_solution = None;
+                    let search = self.search[player_id].clone();
+                    next.search[player_id] = search.reduce(SearchAction::Abandon);
+                    next.game_state = game_state.into();
                 }
             },
             AppAction::RunSearch(maximize_player) => {
-                let mut search = next.search.deref().borrow_mut();
-                next.search_solution = Some(search.search(next.game_state.borrow(), maximize_player));
+                let search = self.search[maximize_player].clone();
+                next.search[maximize_player] = search.reduce(SearchAction::Start {
+                    maximize_player, game_state: next.game_state.clone(), time_ms_per_step: 300, steps: 5
+                });
             }
+            AppAction::DispatchSearch(player_id, action) => {
+                let search = self.search[player_id].clone();
+                next.search[player_id] = search.reduce(action);
+            },
         };
         Rc::new(next)
     }
@@ -140,14 +154,45 @@ pub fn app() -> Html {
         }, (hash, player_to_move));
     }
     {
-        let flag = app_state.search_solution.is_some();
+        let search_player = PlayerId::PlayerSecond;
+        let to_move = app_state.game_state.to_move();
+        let run_search = to_move == Some(search_player);
+        let search = app_state.search[search_player].clone();
+        let changed_check = (
+            search.solution.is_some(),
+            search.search_steps.as_ref().map(|s| s.steps_remaining)
+        );
+        let search_finished = search.search_steps.as_ref().map(|s| s.steps_remaining == 0u32).unwrap_or(false);
+        let search_started = search.search_steps.is_some() && !search_finished;
         let app_state = app_state.clone();
-        use_effect_with_deps(move |(_, _)| {
-            let Some(sln) = &app_state.search_solution else { return; };
-            let Some(action) = sln.pv.head() else { return; };
-            app_state.dispatch(AppAction::SetMessage(sln.counter.summary((TIME_LIMIT_MS as u128) * 1_000_000)));
-            app_state.dispatch(AppAction::PerformAction(action));
-        }, (hash, flag));
+        let search = search.clone();
+        use_effect_with_deps(move |(_, _, run_search, search_started, search_finished)| {
+            if !run_search {
+                return
+            }
+
+            let dt_ns = search.search_steps.as_ref().map(|x| x.total_time_ms * 1_000_000).unwrap_or_default();
+            if *search_finished {
+                let Some(sln) = &search.solution else { return; };
+                let Some(action) = sln.pv.head() else { return; };
+                app_state.dispatch(AppAction::SetMessage(format!(
+                    "Search finished. {} {:?}",
+                    sln.counter.summary(dt_ns),
+                    sln.counter
+                )));
+                app_state.dispatch(AppAction::PerformAction(action));
+            } else if *search_started {
+                app_state.dispatch(AppAction::SetMessage(format!(
+                    "Search started ({} steps remaining). {}",
+                    search.search_steps.as_ref().map(|x| x.steps_remaining).unwrap_or_default(),
+                    search.solution.as_ref().map(|s| s.counter.summary(dt_ns)).unwrap_or_default()
+                )));
+                app_state.dispatch(AppAction::DispatchSearch(search_player, SearchAction::Step));
+            } else {
+                app_state.dispatch(AppAction::SetMessage("Search started.".to_string()));
+                app_state.dispatch(AppAction::DispatchSearch(search_player, SearchAction::Step));
+            }
+        }, (hash, changed_check, run_search, search_started, search_finished));
     }
 
 

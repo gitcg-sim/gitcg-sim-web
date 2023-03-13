@@ -367,6 +367,7 @@ name = "gitcg-sim-web"
 version = "0.1.0"
 dependencies = [
  "gitcg_sim",
+ "instant",
  "yew",
 ]
 
