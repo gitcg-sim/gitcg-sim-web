@@ -9,24 +9,24 @@ use crate::app::{AppAction, AppState, GameStateProp};
 
 #[derive(Properties, PartialEq)]
 pub struct ActionsListProps {
-    pub app_state: UseReducerHandle<AppState>,
+    pub app: UseReducerHandle<AppState>,
 }
 
 #[function_component(ActionsList)]
 pub fn actions_list(props: &ActionsListProps) -> Html {
-    let app_state = &props.app_state;
+    let app = &props.app;
     let perform_action = |action: Input| {
-        let app_state = app_state.clone();
+        let app = app.clone();
         Callback::from(move |_: MouseEvent| {
-            app_state.dispatch(AppAction::PerformAction(action));
+            app.dispatch(AppAction::PerformAction(action));
         })
     };
-    if let Some(winner) = app_state.game_state.winner() {
+    if let Some(winner) = app.game_state.winner() {
         return html! {
             <div class="winner-decided"><p>{"Winner decided: "}{format!("{}", winner)}</p></div>
         };
     }
-    let acts = app_state.game_state.actions();
+    let acts = app.game_state.actions();
     html! {
         <div class="actions-list">
             <table>
@@ -34,19 +34,20 @@ pub fn actions_list(props: &ActionsListProps) -> Html {
                     <th>{"#"}</th>
                     <th>{"Name"}</th>
                     <th>{"Target"}</th>
-                    <th>{"Cost"}</th>
+                    <th style="min-width: 62px;">{"Cost"}</th>
                     <th>{"Action"}</th>
                 </thead>
                 <tbody>
                     {for acts.iter().enumerate().map({
-                        let game_state = GameStateProp::new(&app_state.game_state.game_state);
+                        let game_state = GameStateProp::new(&app.game_state.game_state);
+                        let disabled = app.game_state.to_move() == Some(PlayerId::PlayerSecond);
                         move |(i, &action)| {
                             let onclick = perform_action(action);
                             html! {
                                 <tr>
                                     <td>{format!("{}", i + 1)}</td>
                                     <td>
-                                        <button {onclick}>
+                                        <button {onclick} {disabled}>
                                             <ActionName {action} game_state={game_state.clone()} />
                                         </button>
                                     </td>
@@ -74,7 +75,11 @@ pub fn action_name(props: &ActionProps) -> Html {
     match props.action {
         Input::FromPlayer(_, act) => match act {
             PlayerAction::CastSkill(skill_id) => {
-                html! { <span class="action action-cast-skill" title="Cast Skill">{skill_id.get_skill().name}</span> }
+                html! {
+                    <span class="action action-cast-skill" title="Cast Skill">
+                        {skill_id.get_skill().name}
+                    </span>
+                }
             }
             PlayerAction::PlayCard(card_id, _) => {
                 html! {
@@ -154,13 +159,19 @@ pub fn action_cost(props: &ActionProps) -> Html {
                 }
             )}
             {if cost.unaligned_cost > 0 {
-                Some(html! { <span class="cost cost-unaligned" title="Unaligned cost">{cost.unaligned_cost}</span> })
+                Some(html! {
+                    <span class="cost cost-unaligned" title="Unaligned cost">{cost.unaligned_cost}</span>
+                })
             } else { None }}
             {if cost.aligned_cost > 0 {
-                Some(html! { <span class="cost cost-aligned" title="Aligned cost">{cost.aligned_cost}</span> })
+                Some(html! {
+                    <span class="cost cost-aligned" title="Aligned cost">{cost.aligned_cost}</span>
+                })
             } else { None }}
             {if cost.energy_cost > 0 {
-                Some(html! { <span class="cost cost-energy" title="Energy cost">{cost.energy_cost}</span> })
+                Some(html! {
+                    <span class="cost cost-energy" title="Energy cost">{cost.energy_cost}</span>
+                })
             } else { None }}
         </span>
     }

@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <title>GITCGSim Web</title>
     <link data-trunk rel="sass" href="index.scss" />
+    <base data-trunk-public-url />
   </head>
   <body>
     WebAssembly support is required.
   </body>
+  <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="3" data-bin="worker" data-type="worker" />
 </html>

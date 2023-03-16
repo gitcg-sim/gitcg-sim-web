@@ -1,5 +1,5 @@
 [package]
-name = "gitcg-sim-web"
+name = "gitcg_sim_web"
 version = "0.1.0"
 edition = "2021"
 description = "Web-based Genius Invokation TCG simulator"
@@ -15,8 +15,18 @@ opt-level = 3
 codegen-units = 1
 lto = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "worker"
+path = "src/main.rs"
+
+# See more keys and their definitions at https:/tps/doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-yew = { version="0.20", features=["csr"] }
+yew = { version = "0.20.0", features = ["csr"] }
+yew-agent = { version = "0.2.0" }
 instant = { version = "0.1", features = ["stdweb", "wasm-bindgen"] }
-gitcg_sim = { version = "0.1.0", path = "../GITCGSim", features=["wasm"] }
+gitcg_sim = { version = "0.1.0", path = "../GITCGSim", features = ["wasm"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+bincode = { version = "*" }
+js-sys = { version = "*" }
+wasm-bindgen = { version = "*" }
+gloo = { version = "*" }

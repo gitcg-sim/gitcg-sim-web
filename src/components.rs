@@ -1,20 +1,19 @@
 use std::rc::Rc;
 
 use gitcg_sim::{
-    game_tree_search::GameStateWrapper,
     ids::*,
     types::{
         card_defs::Status,
         enums::{Element, EquipSlot},
         game_state::*,
-        nondet::StandardNondetHandlerState,
     },
 };
 use yew::prelude::*;
+use crate::app;
 
 #[derive(Properties)]
 pub struct BoardProps {
-    pub game_state: Rc<GameStateWrapper<'static, StandardNondetHandlerState>>,
+    pub game_state: Rc<app::G>,
     pub hash: u64,
 }
 
