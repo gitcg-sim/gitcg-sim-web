@@ -1,7 +1,7 @@
 use gitcg_sim::{
     game_tree_search::*,
     ids::*,
-    types::{game_state::*, input::*},
+    types::{game_state::*, input::*, card_defs::Cost},
 };
 use yew::prelude::*;
 
@@ -52,7 +52,7 @@ pub fn actions_list(props: &ActionsListProps) -> Html {
                                         </button>
                                     </td>
                                     <td><ActionTarget {action} game_state={game_state.clone()} /></td>
-                                    <td><ActionCost {action} game_state={game_state.clone()} /></td>
+                                    <td><CostInfo cost={game_state.action_info(action).0} /></td>
                                     <td><ActionType {action} game_state={game_state.clone()} /></td>
                                 </tr>
                             }
@@ -136,10 +136,15 @@ pub fn action_target(props: &ActionProps) -> Html {
     }
 }
 
-#[function_component(ActionCost)]
-pub fn action_cost(props: &ActionProps) -> Html {
-    let game_state = &props.game_state.0;
-    let cost = game_state.action_info(props.action).0;
+
+#[derive(Properties, PartialEq)]
+pub struct CostInfoProps {
+    pub cost: Cost,
+}
+
+#[function_component(CostInfo)]
+pub fn cost_info(props: &CostInfoProps) -> Html {
+    let cost = props.cost;
     if cost.total_dice() == 0 {
         return html! {
             <span class="cost cost-zero">

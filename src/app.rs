@@ -10,7 +10,7 @@ use gitcg_sim::{rand::prelude::*, smallvec::smallvec};
 use yew::prelude::*;
 use yew_agent::{Bridged};
 
-use crate::{actions_list::*, search::*};
+use crate::{actions_list::*, search::*, deck_editor::DeckEditor};
 use crate::components::*;
 
 pub type G = GameStateWrapper<StandardNondetHandlerState>;
@@ -205,14 +205,8 @@ pub fn app() -> Html {
                     {&app.message}
                 </pre>
             </div>
-            <div class="col">
-                <pre class="codebox">
-                    {format!("{:#?}", &app.game_state)}
-                </pre>
-                <pre class="codebox">
-                    {format!("{:#?}", &app.game_state.nd.state)}
-                </pre>
-            </div>
+            <hr />
+            <DeckEditor />
         </main>
     }
 }

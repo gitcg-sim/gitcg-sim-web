@@ -7,6 +7,8 @@ mod actions_list;
 
 mod app;
 
+mod deck_editor;
+
 use app::App;
 use yew_agent::PublicWorker;
 use wasm_bindgen::prelude::*;

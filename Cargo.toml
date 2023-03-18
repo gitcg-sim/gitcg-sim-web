@@ -28,5 +28,8 @@ gitcg_sim = { version = "0.1.0", path = "../GITCGSim", features = ["wasm"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 bincode = { version = "*" }
 js-sys = { version = "*" }
+web-sys = { version = "0.3.61", features = ["HtmlSelectElement"] }
 wasm-bindgen = { version = "*" }
 gloo = { version = "*" }
+gloo-storage = { version = "*" }
+lazy_static = { version = "1.4.*" }

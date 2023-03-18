@@ -295,6 +295,10 @@ main {
   table {
     min-width: 400px;
 
+    thead {
+      border-bottom: 1px solid white;
+    }
+
     th, td {
       text-align: center;
     }
@@ -338,6 +342,43 @@ main {
   }
 }
 
+.deck-editor {
+  .deck-editor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .deck-editor-body {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+  }
+
+  table {
+    border: 1px solid white;
+    min-width: 280px;
+
+    th, td {
+      text-align: center;
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .add-remove {
+    margin-top: 30px;
+    text-align: center;
+  }
+
+  .save-deck {
+    > button {
+      max-width: 200px;
+    }
+  }
+}
+
 .dice {
   height: 1rem;
   margin: 0 4px;
@@ -348,7 +389,8 @@ main {
 
   &.dice-omni {
     color: #222;
-    background: #FCF;
+    background: #FEF;
+    border: 1px solid #FAC;
   }
 }
 
@@ -378,8 +420,10 @@ main {
   }
 
   .cost-energy {
-    background: #EE2;
+    border: 1px solid #FE6;
+    background: #FC2;
     color: black;
+    border-radius: 8px;
   }
 }
 
