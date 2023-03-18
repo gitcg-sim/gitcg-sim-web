@@ -132,7 +132,6 @@ pub fn app() -> Html {
         *search_callback.try_borrow_mut().unwrap() = Some(Callback::from(move |msg| {
             match msg {
                 SearchReturn(false, Some(res), total_time_ns) => {
-                    gloo::console::log!("Step");
                     app.dispatch(AppAction::SetMessage(format!(
                         "Step {}, {} states visited",
                         res.counter.summary(total_time_ns), res.counter.states_visited)));
@@ -141,13 +140,14 @@ pub fn app() -> Html {
                 SearchReturn(true, Some(res), total_time_ns) => {
                     gloo::console::log!("Finish");
                     app.dispatch(AppAction::SetMessage(format!(
-                        "Finished {}, {} states visited",
-                        res.counter.summary(total_time_ns), res.counter.states_visited)));
+                        "Finished {}, {} states visited, Move = {:?}",
+                        res.counter.summary(total_time_ns), res.counter.states_visited,
+                        res.pv.head()
+                    )));
                     let Some(head) = res.pv.head() else { return };
                     app.dispatch(AppAction::PerformAction(head));
                 },
                 SearchReturn(_, None, _) => {
-                    gloo::console::log!("Empty");
                     handler.try_borrow_mut().unwrap().send(SearchAction::Step);
                 },
             }
@@ -161,17 +161,24 @@ pub fn app() -> Html {
             if let Some(player_id) = *player_to_move {
                 if player_id == PlayerId::PlayerSecond {
                     let mut r: RefMut<Box<_>> = handler.as_ref().borrow_mut();
+                    let mut gsr = app.game_state.clone();
+                    {
+                        let game_state = Rc::make_mut(&mut gsr);
+                        game_state.hide_private_information(PlayerId::PlayerFirst);
+                    }
                     r.send(SearchAction::Start {
                         maximize_player: PlayerId::PlayerSecond,
-                        game_state: app.game_state.clone(),
+                        game_state: gsr,
                         steps: 3,
                     });
+                    app.dispatch(AppAction::SetMessage("Searching...".to_string()));
                 }
             }
         }, (hash, player_to_move));
     }
 
     let active_player = app.game_state.game_state.get_active_player();
+    let to_move = app.game_state.to_move();
     let dice = active_player.map(|p| p.dice);
     html! {
         <main>
@@ -180,9 +187,17 @@ pub fn app() -> Html {
                 <Board game_state={app.game_state.clone()} hash={app.game_state.zobrist_hash()} />
                 <div>
                     <h2>{"Dice"}</h2>
-                    {dice.map(|dice| html! { <DiceList {dice} /> })}
+                    {if to_move == Some(PlayerId::PlayerFirst) {
+                        html! { for dice.map(|dice| html! { <DiceList {dice} /> }) }
+                    } else {
+                        html! { " - " }
+                    }}
                     <h2>{"Actions"}</h2>
-                    <ActionsList app={app.clone()} />
+                    {if to_move == Some(PlayerId::PlayerFirst) {
+                        html! { <ActionsList app={app.clone()} /> }
+                    } else {
+                        html! { " - " }
+                    }}
                 </div>
             </div>
             <div class="col">

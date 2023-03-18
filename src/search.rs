@@ -49,7 +49,7 @@ pub struct SearchSteps {
     pub game_state: G,
 }
 
-const TIME_LIMIT_MS: u32 = 400;
+const TIME_LIMIT_MS: u32 = 500;
 
 impl Worker for SearchWorker {
     type Reach = Public<Self>;
@@ -63,12 +63,12 @@ impl Worker for SearchWorker {
     fn create(link: WorkerLink<Self>) -> Self {
         let config = MCTSConfig::new(
             TIME_LIMIT_MS,
-            6.0,
+            8.0,
             8192,
             false,
-            50,
+            40,
             100,
-            true
+            false
         );
         Self {
             link,
@@ -85,7 +85,6 @@ impl Worker for SearchWorker {
                 game_state,
                 steps,
             } => {
-                gloo::console::log!("Start");
                 self.search_steps = Some(SearchSteps {
                     steps_remaining: steps,
                     game_state: game_state.as_ref().clone(),
@@ -96,17 +95,19 @@ impl Worker for SearchWorker {
                 self.link.respond(id, SearchReturn::default());
             },
             SearchAction::Abandon => {
-                gloo::console::log!("Abandon");
                 self.search_steps = None;
                 self.solution = None;
                 self.link.respond(id, SearchReturn::default());
             },
             SearchAction::Step => 'a: {
-                gloo::console::log!("Step");
                 let Some(mut search_steps) = self.search_steps.clone() else {
                     break 'a
                 };
                 if search_steps.steps_remaining == 0 {
+                    gloo::console::log!(format!(
+                        "Finish, PV = {:?}",
+                        self.solution.as_ref().map(|s| s.pv.clone().into_iter().collect::<Vec<_>>())
+                    ));
                     self.link.respond(id, SearchReturn(true, self.solution.clone(), search_steps.total_time_ms));
                     break 'a
                 }
@@ -114,6 +115,13 @@ impl Worker for SearchWorker {
                 let t0 = Instant::now();
                 let mut res = self.search.search(
                     &search_steps.game_state, search_steps.maximize_player
+                );
+                gloo::console::log!(format!("Step {:?}", res.pv.head()));
+                gloo::console::log!(format!(
+                    "Root: {}",
+                    self.search.root.and_then(|(_, r)| self.search.tree.get(r))
+                        .map(|d| format!("{:?}", d.data))
+                        .unwrap_or_default())
                 );
                 let dt = (Instant::now() - t0).as_nanos();
 
@@ -125,7 +133,6 @@ impl Worker for SearchWorker {
                 res.update(&res1);
                 self.search_steps = Some(search_steps);
                 self.solution = Some(res);
-                gloo::console::log!("Step Finish");
                 self.link.respond(id, SearchReturn(false, self.solution.clone(), t));
             },
         }
