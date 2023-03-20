@@ -155,7 +155,10 @@ pub fn app() -> Html {
                     "Finished {}, {} states visited, Best Move = {}",
                     res.counter.summary(total_time_ns),
                     res.counter.states_visited,
-                    res.pv.head().map(|a| describe_action(&app.game_state, a)).unwrap_or_default()
+                    res.pv
+                        .head()
+                        .map(|a| describe_action(&app.game_state, a))
+                        .unwrap_or_default()
                 )));
                 let Some(head) = res.pv.head() else { return };
                 app.dispatch(AppAction::PerformAction(head));
@@ -330,17 +333,15 @@ pub fn describe_action(game_state: &G, action: Input) -> String {
     match act {
         PlayerAction::EndRound => "End Round".to_string(),
         PlayerAction::PlayCard(card_id, target) => {
-            let target_part = target.map(|t| {
-                match t {
-                    CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id),
-                }
+            let target_part = target.map(|t| match t {
+                CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id),
             });
             if let Some(t) = target_part {
                 format!("Card({}, {t})", card_name(card_id))
             } else {
                 format!("Card({})", card_name(card_id))
             }
-        },
+        }
         PlayerAction::ElementalTuning(card_id) => format!("ET({})", card_name(card_id)),
         PlayerAction::CastSkill(skill_id) => format!("Cast({})", skill_id.get_skill().name),
         PlayerAction::SwitchCharacter(i) | PlayerAction::PostDeathSwitch(i) => {

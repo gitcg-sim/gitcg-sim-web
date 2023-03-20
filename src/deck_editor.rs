@@ -353,13 +353,20 @@ pub fn deck_selector(
     );
 
     let key = use_state(|| 0i32);
-    use_effect_with_deps({
-        let key = key.clone();
-        move |_| {
-            let iv = Interval::new(1_000, move || { key.set(*key + 1); });
-            move || { iv.cancel(); }
-        }
-    }, ());
+    use_effect_with_deps(
+        {
+            let key = key.clone();
+            move |_| {
+                let iv = Interval::new(1_000, move || {
+                    key.set(*key + 1);
+                });
+                move || {
+                    iv.cancel();
+                }
+            }
+        },
+        (),
+    );
 
     html! {
         <label for={id.clone()} key={format!("{}", *key)}>
