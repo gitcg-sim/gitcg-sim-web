@@ -1,7 +1,7 @@
 use gitcg_sim::{
     game_tree_search::*,
     ids::*,
-    types::{game_state::*, input::*, card_defs::Cost},
+    types::{card_defs::Cost, game_state::*, input::*},
 };
 use yew::prelude::*;
 
@@ -135,7 +135,6 @@ pub fn action_target(props: &ActionProps) -> Html {
         Input::NoAction | Input::NondetResult(..) => html! { "" },
     }
 }
-
 
 #[derive(Properties, PartialEq)]
 pub struct CostInfoProps {

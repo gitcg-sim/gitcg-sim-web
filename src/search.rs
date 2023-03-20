@@ -4,11 +4,11 @@ use yew_agent::*;
 
 use gitcg_sim::{
     game_tree_search::*,
-    mcts::{MCTS, MCTSConfig},
+    mcts::{MCTSConfig, MCTS},
     types::game_state::*,
 };
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::app::G;
 
@@ -61,15 +61,7 @@ impl Worker for SearchWorker {
     type Output = SearchReturn;
 
     fn create(link: WorkerLink<Self>) -> Self {
-        let config = MCTSConfig::new(
-            TIME_LIMIT_MS,
-            8.0,
-            8192,
-            false,
-            40,
-            100,
-            false
-        );
+        let config = MCTSConfig::new(TIME_LIMIT_MS, 8.0, 8192, false, 40, 100, false);
         Self {
             link,
             search: MCTS::new(config),
@@ -93,12 +85,12 @@ impl Worker for SearchWorker {
                 });
                 self.solution = None;
                 self.link.respond(id, SearchReturn::default());
-            },
+            }
             SearchAction::Abandon => {
                 self.search_steps = None;
                 self.solution = None;
                 self.link.respond(id, SearchReturn::default());
-            },
+            }
             SearchAction::Step => 'a: {
                 let Some(mut search_steps) = self.search_steps.clone() else {
                     break 'a
@@ -106,23 +98,32 @@ impl Worker for SearchWorker {
                 if search_steps.steps_remaining == 0 {
                     gloo::console::log!(format!(
                         "Finish, PV = {:?}",
-                        self.solution.as_ref().map(|s| s.pv.clone().into_iter().collect::<Vec<_>>())
+                        self.solution.as_ref().map(|s| s
+                            .pv
+                            .clone()
+                            .into_iter()
+                            .collect::<Vec<_>>())
                     ));
-                    self.link.respond(id, SearchReturn(true, self.solution.clone(), search_steps.total_time_ms));
-                    break 'a
+                    self.link.respond(
+                        id,
+                        SearchReturn(true, self.solution.clone(), search_steps.total_time_ms),
+                    );
+                    break 'a;
                 }
 
                 let t0 = Instant::now();
-                let mut res = self.search.search(
-                    &search_steps.game_state, search_steps.maximize_player
-                );
+                let mut res = self
+                    .search
+                    .search(&search_steps.game_state, search_steps.maximize_player);
                 gloo::console::log!(format!("Step {:?}", res.pv.head()));
                 gloo::console::log!(format!(
                     "Root: {}",
-                    self.search.root.and_then(|(_, r)| self.search.tree.get(r))
+                    self.search
+                        .root
+                        .and_then(|(_, r)| self.search.tree.get(r))
                         .map(|d| format!("{:?}", d.data))
-                        .unwrap_or_default())
-                );
+                        .unwrap_or_default()
+                ));
                 let dt = (Instant::now() - t0).as_nanos();
 
                 let res1 = self.solution.clone().unwrap_or_default();
@@ -133,14 +134,13 @@ impl Worker for SearchWorker {
                 res.update(&res1);
                 self.search_steps = Some(search_steps);
                 self.solution = Some(res);
-                self.link.respond(id, SearchReturn(false, self.solution.clone(), t));
-            },
+                self.link
+                    .respond(id, SearchReturn(false, self.solution.clone(), t));
+            }
         }
     }
 
-    fn update(&mut self, _msg: Self::Message) {
-
-    }
+    fn update(&mut self, _msg: Self::Message) {}
 
     fn name_of_resource() -> &'static str {
         "worker.js"

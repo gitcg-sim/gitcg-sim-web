@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::app;
 use gitcg_sim::{
     ids::*,
     types::{
@@ -9,7 +10,6 @@ use gitcg_sim::{
     },
 };
 use yew::prelude::*;
-use crate::app;
 
 #[derive(Properties)]
 pub struct BoardProps {
@@ -91,9 +91,11 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
             <h3>{format!("Player {}", props.player_id)}</h3>
             <div class="player-supports">
                 <h4>{"Supports"}</h4>
-                {for supports.iter().copied().map(|&support| html! {
-                    <Support {support} />
-                })}
+                <div class="zones">
+                    {for supports.iter().copied().map(|&support| html! {
+                        <Support {support} />
+                    })}
+                </div>
             </div>
             <div class="player-characters">
                 <h4>{"Characters"}</h4>
@@ -126,9 +128,11 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
             </div>
             <div class="player-summons">
                 <h4>{"Summons"}</h4>
-                {for summons.iter().copied().map(|&summon| html! {
-                    <Summon {summon} />
-                })}
+                <div class="zones">
+                    {for summons.iter().copied().map(|&summon| html! {
+                        <Summon {summon} />
+                    })}
+                </div>
             </div>
             <div class="player-hand">
                 {for player_state.hand.iter().copied().map(|card_id| html! {

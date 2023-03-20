@@ -1,4 +1,3 @@
-
 mod search;
 
 mod components;
@@ -9,10 +8,10 @@ mod app;
 
 mod deck_editor;
 
-use app::App;
-use yew_agent::PublicWorker;
-use wasm_bindgen::prelude::*;
 use crate::search::SearchWorker;
+use app::App;
+use wasm_bindgen::prelude::*;
+use yew_agent::PublicWorker;
 
 pub fn main() {
     use js_sys::{global, Reflect};

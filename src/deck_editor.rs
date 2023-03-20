@@ -1,14 +1,15 @@
 use std::{collections::HashMap, rc::Rc};
 
-use gitcg_sim::{ids::*, deck::Decklist};
-use serde::{Serialize, Deserialize};
+use gitcg_sim::enum_map::Enum;
+use gitcg_sim::{deck::Decklist, ids::*};
+use gloo::storage::LocalStorage;
+use gloo::timers::callback::Interval;
+use gloo_storage::Storage;
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlInputElement, HtmlSelectElement};
-use yew::{prelude::*, html::{onchange}};
-use lazy_static::{lazy_static};
-use gitcg_sim::enum_map::Enum;
-use gloo::storage::LocalStorage;
-use gloo_storage::Storage;
+use yew::{html::onchange, prelude::*};
 
 use crate::actions_list::CostInfo;
 
@@ -22,11 +23,7 @@ const RESTRICTED_CARDS: [CardId; 5] = [
 
 lazy_static! {
     pub static ref DECK1: Decklist = Decklist {
-        characters: vec![
-            CharId::Xingqiu,
-            CharId::Ganyu,
-            CharId::Mona,
-        ].into(),
+        characters: vec![CharId::Xingqiu, CharId::Ganyu, CharId::Mona,].into(),
         cards: vec![
             CardId::TheBestestTravelCompanion,
             CardId::TheBestestTravelCompanion,
@@ -58,15 +55,11 @@ lazy_static! {
             CardId::Katheryne,
             CardId::FavoniusCathedral,
             CardId::FavoniusCathedral,
-        ].into(),
+        ]
+        .into(),
     };
-
     pub static ref DECK2: Decklist = Decklist {
-        characters: vec![
-            CharId::Klee,
-            CharId::Mona,
-            CharId::FatuiPyroAgent,
-        ].into(),
+        characters: vec![CharId::Klee, CharId::Mona, CharId::FatuiPyroAgent,].into(),
         cards: vec![
             CardId::TheBestestTravelCompanion,
             CardId::TheBestestTravelCompanion,
@@ -98,15 +91,16 @@ lazy_static! {
             CardId::Katheryne,
             CardId::FavoniusCathedral,
             CardId::FavoniusCathedral,
-        ].into(),
+        ]
+        .into(),
     };
-
     pub static ref DECK3: Decklist = Decklist {
         characters: vec![
             CharId::KamisatoAyaka,
             CharId::Yoimiya,
             CharId::FatuiPyroAgent,
-        ].into(),
+        ]
+        .into(),
         cards: vec![
             CardId::TheBestestTravelCompanion,
             CardId::TheBestestTravelCompanion,
@@ -138,15 +132,16 @@ lazy_static! {
             CardId::Katheryne,
             CardId::FavoniusCathedral,
             CardId::FavoniusCathedral,
-        ].into(),
+        ]
+        .into(),
     };
-
     pub static ref DECK4: Decklist = Decklist {
         characters: vec![
             CharId::KujouSara,
             CharId::JadeplumeTerrorshroom,
             CharId::Keqing,
-        ].into(),
+        ]
+        .into(),
         cards: vec![
             CardId::TheBestestTravelCompanion,
             CardId::TheBestestTravelCompanion,
@@ -178,9 +173,9 @@ lazy_static! {
             CardId::Katheryne,
             CardId::FavoniusCathedral,
             CardId::FavoniusCathedral,
-        ].into(),
+        ]
+        .into(),
     };
-
     pub static ref CARDS: HashMap<&'static str, CardId> = {
         let n = <CardId as Enum>::LENGTH;
         let mut cards = HashMap::with_capacity(n);
@@ -193,13 +188,11 @@ lazy_static! {
         }
         cards
     };
-
     pub static ref CARDS_LIST: Vec<(&'static str, CardId)> = {
         let mut v: Vec<_> = CARDS.iter().map(|(&a, &b)| (a, b)).collect();
         v.sort_by_key(|(card_name, card_id)| (card_id.get_card().card_type, *card_name));
         v
     };
-
     pub static ref CHARS: HashMap<&'static str, CharId> = {
         let n = <CharId as Enum>::LENGTH;
         let mut chars = HashMap::with_capacity(n);
@@ -209,13 +202,16 @@ lazy_static! {
         }
         chars
     };
-
     pub static ref CHARS_LIST: Vec<(&'static str, CharId)> = {
         let mut v: Vec<_> = CHARS.iter().map(|(&a, &b)| (a, b)).collect();
         v.sort_by_key(|(name, _)| (*name));
         v
     };
 }
+
+const MAX_CHARS: usize = 4;
+const MIN_CARDS: usize = 0;
+const MAX_CARDS: usize = 40;
 
 pub enum DeckEditorAction {
     AddChar(CharId),
@@ -232,11 +228,8 @@ pub struct DeckEditorState {
     pub chars: Vec<CharId>,
     pub cards: Vec<CardId>,
     pub name: String,
+    pub key: u32,
 }
-
-const MAX_CHARS: usize = 4;
-const MIN_CARDS: usize = 0;
-const MAX_CARDS: usize = 40;
 
 impl DeckEditorState {
     pub fn to_decklist(self: Rc<Self>) -> Decklist {
@@ -248,7 +241,7 @@ const KEY: &str = "gicg_sim_web_decks";
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Decks {
-    pub decks: HashMap<String, Decklist>
+    pub decks: HashMap<String, Decklist>,
 }
 
 impl Default for Decks {
@@ -262,22 +255,29 @@ impl Default for Decks {
     }
 }
 
+impl Decks {
+    pub fn get_from_storage() -> Self {
+        LocalStorage::get(KEY).unwrap_or_default()
+    }
+}
+
 impl Reducible for DeckEditorState {
     type Action = DeckEditorAction;
 
     fn reduce(self: Rc<Self>, action: Self::Action) -> Rc<Self> {
         let mut next: DeckEditorState = DeckEditorState::clone(self.as_ref());
+        next.key += 1;
         match action {
             DeckEditorAction::AddChar(char_id) => {
                 if next.chars.len() < MAX_CHARS && !next.chars.contains(&char_id) {
                     next.chars.push(char_id);
                 }
-            },
+            }
             DeckEditorAction::RemoveChar(char_id) => {
                 if !next.chars.is_empty() {
                     next.chars.retain(|&c| c != char_id);
                 }
-            },
+            }
             DeckEditorAction::AddCard(card_id) => {
                 if next.cards.len() < MAX_CARDS {
                     let count = next.cards.iter().filter(|&&c| c == card_id).count();
@@ -286,22 +286,18 @@ impl Reducible for DeckEditorState {
                         next.cards.sort_by_key(|c| c.get_card().name);
                     }
                 }
-            },
+            }
             DeckEditorAction::RemoveCard(card_id) => {
                 if next.cards.len() > MIN_CARDS {
-                    if let Some((i, _)) = next.cards.iter().enumerate().find(|(_, &c)| c == card_id) {
+                    if let Some((i, _)) = next.cards.iter().enumerate().find(|(_, &c)| c == card_id)
+                    {
                         next.cards.remove(i);
                     }
                 }
-            },
+            }
             DeckEditorAction::UpdateName(name) => {
-                // let mut decks: Decks = LocalStorage::get(KEY).unwrap_or_default();
-                // decks.decks.insert(name.clone(), self.to_decklist());
-                // if let Err(e) = LocalStorage::set(&name, decks) {
-                //     gloo::console::error!(format!("Can't save into localStorage: {:#?}", e));
-                // }
                 next.name = name;
-            },
+            }
             DeckEditorAction::LoadDeck(name) => {
                 let decks: Decks = LocalStorage::get(KEY).unwrap_or_default();
                 if let Some(deck) = decks.decks.get(&name) {
@@ -309,82 +305,137 @@ impl Reducible for DeckEditorState {
                     next.cards = deck.cards.to_vec();
                     next.name = name;
                 }
-            },
+            }
             DeckEditorAction::Save => {
                 let name = next.name.clone();
                 let mut decks: Decks = LocalStorage::get(KEY).unwrap_or_default();
-                decks.decks.insert(name.clone(), self.to_decklist());
+                decks.decks.insert(name, self.to_decklist());
                 if let Err(e) = LocalStorage::set(KEY, decks) {
                     gloo::console::error!(format!("Can't save into localStorage: {:#?}", e));
                 }
-            },
+            }
         }
         Rc::new(next)
     }
 }
 
 #[derive(Properties, PartialEq)]
-pub struct DeckEditorProps {
+pub struct DeckSelectorProps {
+    pub title: String,
+    pub id: String,
+    pub selected: String,
+    pub on_select: Callback<String, ()>,
 }
+
+#[function_component(DeckSelector)]
+pub fn deck_selector(
+    DeckSelectorProps {
+        id,
+        title,
+        selected,
+        on_select,
+    }: &DeckSelectorProps,
+) -> Html {
+    let (deck_names, decks): (Vec<String>, Decks) = {
+        let decks = Decks::get_from_storage();
+        let mut deck_names: Vec<_> = decks.decks.keys().cloned().collect();
+        deck_names.sort();
+        (deck_names, decks)
+    };
+    let onchange = use_callback(
+        move |e: onchange::Event, on_select| {
+            let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlSelectElement>().ok()) else {
+            return
+        };
+            on_select.emit(input.value());
+        },
+        on_select.clone(),
+    );
+
+    let key = use_state(|| 0i32);
+    use_effect_with_deps({
+        let key = key.clone();
+        move |_| {
+            let iv = Interval::new(1_000, move || { key.set(*key + 1); });
+            move || { iv.cancel(); }
+        }
+    }, ());
+
+    html! {
+        <label for={id.clone()} key={format!("{}", *key)}>
+            {title}
+            <select id={id.clone()} name={id.clone()} {onchange}>
+                {for deck_names.iter().map(|name| {
+                    let deck_summary = if let Some(decklist) = decks.decks.get(name) {
+                        let n = decklist.cards.len();
+                        let char_names: Vec<_> = decklist.characters.iter().map(|c| c.get_char_card().name).collect();
+                        let chars = char_names.join(", ");
+                        format!("{name} | {chars} | {n}")
+                    } else {
+                        name.to_string()
+                    };
+                    html! {
+                        <option value={name.clone()} selected={name == selected}>
+                            {deck_summary}
+                        </option>
+                    }
+                })}
+            </select>
+        </label>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+pub struct DeckEditorProps {}
 
 #[function_component(DeckEditor)]
 pub fn deck_editor(_: &DeckEditorProps) -> Html {
     let state = use_reducer_eq(DeckEditorState::default);
     let chars = state.chars.clone();
     let cards = state.cards.clone();
-    let save_deck = use_callback({
-        let state = state.clone();
-        move |_, ()| {
-            state.dispatch(DeckEditorAction::Save)
-        }
-    }, ());
-    let onchange = use_callback({
-        let state = state.clone();
-        move |e: onchange::Event, ()| {
-            let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok()) else {
+    let save_deck = use_callback(
+        {
+            let state = state.clone();
+            move |_, ()| state.dispatch(DeckEditorAction::Save)
+        },
+        (),
+    );
+    let onchange = use_callback(
+        {
+            let state = state.clone();
+            move |e: onchange::Event, ()| {
+                let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok()) else {
                 return
             };
-            state.dispatch(DeckEditorAction::UpdateName(input.value()))
-        }
-    }, ());
-    let (deck_names, decks): (Vec<String>, Decks) = {
-        let decks = LocalStorage::get::<Decks>(KEY).unwrap_or_default();
-        let mut deck_names: Vec<_> = decks.decks.keys().cloned().collect();
-        deck_names.sort();
-        (deck_names, decks)
-    };
-    let load_deck = use_callback({
-        let state = state.clone();
-        move |e: onchange::Event, ()| {
-            let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlSelectElement>().ok()) else {
-                return
-            };
-            state.dispatch(DeckEditorAction::LoadDeck(input.value()))
-        }
-    }, ());
+                state.dispatch(DeckEditorAction::UpdateName(input.value()))
+            }
+        },
+        (),
+    );
+    let on_select = use_callback(
+        {
+            let state = state.clone();
+            move |name, ()| state.dispatch(DeckEditorAction::LoadDeck(name))
+        },
+        (),
+    );
     html! {
         <div class="deck-editor">
-            <h1>{"Deck Editor"}</h1>
+            <h2>{"Deck Editor"}</h2>
             <div class="deck-editor-form">
-                <label for="deck-select">
-                    {"Deck: "}
-                    <select name="decks" value={state.name.clone()} onchange={load_deck}>
-                        {for deck_names.iter().map(|name| {
-                            let deck_summary = if let Some(decklist) = decks.decks.get(name) {
-                                let n = decklist.cards.len();
-                                let char_names: Vec<_> = decklist.characters.iter().map(|c| c.get_char_card().name).collect();
-                                let chars = char_names.join(", ");
-                                format!("{name} | {chars} | {n}")
-                            } else {
-                                name.to_string()
-                            };
-                            html! { <option value={name.clone()}>{deck_summary}</option> }
-                        })}
-                    </select>
-                </label>
+                <DeckSelector
+                    key={state.key}
+                    title={"Deck to edit: "}
+                    id="deck-editor-select"
+                    selected={state.name.clone()}
+                    {on_select}
+                />
                 <label for="deck-name">
                     {"Deck Name: "}
-                    <input id="deck-name" type="text" value={state.name.clone()} {onchange} /><br />
+                    <input
+                        id="deck-name" type="text" value={state.name.clone()} {onchange}
+                        placeholder="Edit to save under a new name"
+                    /><br />
                 </label>
                 <div class="save-deck">
                     <button onclick={save_deck}>{"Save Deck"}</button>
