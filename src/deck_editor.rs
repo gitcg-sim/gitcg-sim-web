@@ -344,9 +344,12 @@ pub fn deck_selector(
     };
     let onchange = use_callback(
         move |e: onchange::Event, on_select| {
-            let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlSelectElement>().ok()) else {
-            return
-        };
+            let Some(input) = e
+                .target()
+                .and_then(|t| t.dyn_into::<HtmlSelectElement>().ok())
+            else {
+                return;
+            };
             on_select.emit(input.value());
         },
         on_select.clone(),
@@ -411,9 +414,12 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
         {
             let state = state.clone();
             move |e: onchange::Event, ()| {
-                let Some(input) = e.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok()) else {
-                return
-            };
+                let Some(input) = e
+                    .target()
+                    .and_then(|t| t.dyn_into::<HtmlInputElement>().ok())
+                else {
+                    return;
+                };
                 state.dispatch(DeckEditorAction::UpdateName(input.value()))
             }
         },

@@ -1,16 +1,19 @@
+use gloo::utils::format::JsValueSerdeExt;
 use instant::Instant;
 use std::rc::Rc;
+use wasm_bindgen::JsValue;
 use yew_agent::*;
 
 use gitcg_sim::{
     game_tree_search::*,
-    mcts::{MCTSConfig, MCTS},
+    mcts::{policy::DefaultEvalPolicy, MCTSConfig, MCTS},
+    training::policy::PolicyNetwork,
     types::game_state::*,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::app::G;
+use crate::app::{describe_action_with_player, G};
 
 #[derive(Serialize, Deserialize)]
 pub struct WorkerMessage {
@@ -22,7 +25,7 @@ pub struct WorkerMessage {
 
 pub struct SearchWorker {
     pub link: WorkerLink<Self>,
-    pub search: MCTS<G>,
+    pub search: MCTS<G, DefaultEvalPolicy, PolicyNetwork>,
     pub search_steps: Option<SearchSteps>,
     pub solution: Option<SearchResult<G>>,
 }
@@ -36,6 +39,7 @@ pub enum SearchAction {
     },
     Step,
     Abandon,
+    SetConfig(MCTSConfig),
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -49,7 +53,30 @@ pub struct SearchSteps {
     pub game_state: G,
 }
 
-const TIME_LIMIT_MS: u32 = 500;
+const TIME_LIMIT_MS: u128 = 500;
+
+const DEFAULT_CONFIG: MCTSConfig = {
+    let c = 2.0;
+    let tt_size_mb = 32;
+    let parallel = false;
+    let random_playout_iters = 10;
+    let random_playout_cutoff = 20;
+    let random_playout_bias = Some(10.0);
+    let debug = false;
+    MCTSConfig {
+        c,
+        tt_size_mb,
+        parallel,
+        random_playout_iters,
+        random_playout_cutoff,
+        random_playout_bias,
+        debug,
+        limits: Some(SearchLimits {
+            max_time_ms: Some(TIME_LIMIT_MS),
+            max_positions: None,
+        }),
+    }
+};
 
 impl Worker for SearchWorker {
     type Reach = Public<Self>;
@@ -61,10 +88,17 @@ impl Worker for SearchWorker {
     type Output = SearchReturn;
 
     fn create(link: WorkerLink<Self>) -> Self {
-        let config = MCTSConfig::new(TIME_LIMIT_MS, 8.0, 8192, false, 40, 100, false);
+        gloo::console::log!(
+            "Worker initialized, config: ",
+            JsValue::from_serde::<MCTSConfig>(&DEFAULT_CONFIG).unwrap()
+        );
         Self {
             link,
-            search: MCTS::new(config),
+            search: MCTS::new_with_eval_policy_and_selection_policy(
+                DEFAULT_CONFIG,
+                Default::default(),
+                PolicyNetwork::new(),
+            ),
             search_steps: None,
             solution: None,
         }
@@ -93,17 +127,37 @@ impl Worker for SearchWorker {
             }
             SearchAction::Step => 'a: {
                 let Some(mut search_steps) = self.search_steps.clone() else {
-                    break 'a
+                    break 'a;
                 };
                 if search_steps.steps_remaining == 0 {
-                    gloo::console::log!(format!(
-                        "Finish, PV = {:?}",
-                        self.solution.as_ref().map(|s| s
-                            .pv
-                            .clone()
-                            .into_iter()
-                            .collect::<Vec<_>>())
-                    ));
+                    if let Some((_, root)) = self.search.root {
+                        if let Some((root, initial_state)) = self
+                            .search
+                            .tree
+                            .get(root)
+                            .map(|root_node| (root_node.token(), root_node.data.state.clone()))
+                        {
+                            gloo::console::log!(format!(
+                                "Search Finish: Principal Variation = {:?}",
+                                self.solution.as_ref().map(|s| s
+                                    .pv
+                                    .clone()
+                                    .map(|action| describe_action_with_player(
+                                        &initial_state,
+                                        action
+                                    ))
+                                    .collect::<Vec<_>>())
+                            ));
+                            gloo::console::log!(
+                                "MCTS Tree: ",
+                                JsValue::from_serde(&self.search.dump_tree(root, 4, &|action| {
+                                    describe_action_with_player(&initial_state, action)
+                                }))
+                                .unwrap_or_default()
+                            );
+                            gloo::console::log!("-------------------");
+                        }
+                    }
                     self.link.respond(
                         id,
                         SearchReturn(true, self.solution.clone(), search_steps.total_time_ms),
@@ -131,11 +185,20 @@ impl Worker for SearchWorker {
                 search_steps.total_time_ms += dt;
                 search_steps.steps_remaining -= 1;
                 let t = search_steps.total_time_ms;
-                res.update(&res1);
+                {
+                    res.counter.add_in_place(&res1.counter);
+                    if res1.pv.len() >= res.pv.len() {
+                        res.pv = res1.pv;
+                        res.eval = res1.eval;
+                    }
+                }
                 self.search_steps = Some(search_steps);
                 self.solution = Some(res);
                 self.link
                     .respond(id, SearchReturn(false, self.solution.clone(), t));
+            }
+            SearchAction::SetConfig(c) => {
+                self.search.config = c;
             }
         }
     }

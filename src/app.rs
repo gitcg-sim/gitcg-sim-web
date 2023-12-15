@@ -12,6 +12,7 @@ use gitcg_sim::{
     types::{dice_counter::*, enums::*, game_state::*, input::*, nondet::*},
 };
 use gitcg_sim::{rand::prelude::*, smallvec::smallvec};
+use gloo_storage::{LocalStorage, Storage};
 use yew::prelude::*;
 use yew_agent::Bridged;
 
@@ -115,6 +116,9 @@ fn default_game_state() -> G {
     new_standard_game(&decklist1, &decklist2, rand1)
 }
 
+const RANDOM_SEED_KEY: &str = "random_seed";
+const SEARCH_STEPS_KEY: &str = "search_steps";
+
 #[function_component(App)]
 pub fn app() -> Html {
     let app = use_reducer(AppState::default);
@@ -185,7 +189,7 @@ pub fn app() -> Html {
                         r.send(SearchAction::Start {
                             maximize_player: PlayerId::PlayerSecond,
                             game_state: gsr,
-                            steps: 3,
+                            steps: LocalStorage::get(SEARCH_STEPS_KEY).unwrap_or(5),
                         });
                         app.dispatch(AppAction::SetMessage("Searching...".to_string()));
                     }
@@ -198,7 +202,7 @@ pub fn app() -> Html {
     let on_start = use_callback(
         move |r: Rc<(Decklist, Decklist)>, app| {
             let (decklist1, decklist2) = r.as_ref();
-            let rng = SmallRng::seed_from_u64(100);
+            let rng = SmallRng::seed_from_u64(LocalStorage::get(RANDOM_SEED_KEY).unwrap_or(100));
             app.dispatch(AppAction::SetGameState(
                 new_standard_game(decklist1, decklist2, rng).into(),
             ));
@@ -284,8 +288,8 @@ fn start_game_form(props: &StartGameFormProps) -> Html {
             let decks = &Decks::get_from_storage().decks;
             let t = (decks.get(d1), decks.get(d2));
             let (Some(decklist1), Some(decklist2)) = t else {
-            return
-        };
+                return;
+            };
             on_start.emit(Rc::new((decklist1.clone(), decklist2.clone())))
         },
         (deck_p1.clone(), deck_p2.clone()),
@@ -323,18 +327,31 @@ fn start_game_form(props: &StartGameFormProps) -> Html {
     }
 }
 
+pub fn describe_action_with_player(game_state: &G, action: Input) -> String {
+    format!(
+        "{}{}",
+        action
+            .player()
+            .map(|p| format!("{p}: "))
+            .unwrap_or_default(),
+        describe_action(game_state, action)
+    )
+}
+
 pub fn describe_action(game_state: &G, action: Input) -> String {
     let card_name = |card_id: CardId| card_id.get_card().name;
     let char_name = |char_id: CharId| char_id.get_char_card().name;
     let Input::FromPlayer(player_id, act) = action else {
-        return "\u{2205}".to_string()
+        return "\u{2205}".to_string();
     };
-    let get_char = |i: u8| &game_state.game_state.get_player(player_id).char_states[i as usize];
+    let get_char = |i: u8| &game_state.game_state.get_player(player_id).char_states[i];
     match act {
         PlayerAction::EndRound => "End Round".to_string(),
         PlayerAction::PlayCard(card_id, target) => {
             let target_part = target.map(|t| match t {
-                CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id),
+                CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id).to_string(),
+                CardSelection::OwnSummon(s) => format!("Own Summon({})", s.get_status().name),
+                CardSelection::OpponentSummon(s) => format!("Opp. Summon({})", s.get_status().name),
             });
             if let Some(t) = target_part {
                 format!("Card({}, {t})", card_name(card_id))

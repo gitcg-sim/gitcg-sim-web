@@ -82,7 +82,7 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
         player_state, hash, ..
     } = props;
     let chars = &player_state.char_states;
-    let active = player_state.active_char_index;
+    let active = player_state.active_char_idx;
     let summons = player_state.status_collection.summon_statuses_vec();
     let supports = player_state.status_collection.support_statuses_vec();
     let hidden = props.player_id == PlayerId::PlayerSecond;
@@ -99,7 +99,7 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
             </div>
             <div class="player-characters">
                 <h4>{"Characters"}</h4>
-                {for chars.iter().enumerate().map(|(i, c)| {
+                {for chars.iter_all().enumerate().map(|(i, c)| {
                     let is_active = (i as u8) == active;
                     let equip_statuses: Vec<(EquipSlot, StatusId, AppliedEffectState)> = player_state
                         .status_collection
@@ -116,7 +116,7 @@ pub fn player_part(props: &PlayerPartProps) -> Html {
                     } else { vec![] };
                     html! {
                         <Character
-                            char_state={c.clone()}
+                            char_state={*c}
                             {is_active}
                             {equip_statuses}
                             {char_statuses}
@@ -245,7 +245,7 @@ pub struct SummonProps {
 fn summon_part(props: &SummonProps) -> Html {
     let summon = &props.summon;
     let Some(summon_id) = summon.summon_id() else {
-        return html! { <div class={"summon-not-found"} /> }
+        return html! { <div class={"summon-not-found"} /> };
     };
     let status = summon_id.get_status();
     html! {
@@ -265,7 +265,7 @@ pub struct SupportProps {
 fn support_part(props: &SupportProps) -> Html {
     let support = &props.support;
     let Some(support_id) = support.support_id() else {
-        return html! { <div class={"support-not-found"} /> }
+        return html! { <div class={"support-not-found"} /> };
     };
     let status = support_id.get_status();
     html! {

@@ -122,6 +122,12 @@ pub fn action_target(props: &ActionProps) -> Html {
             PlayerAction::PlayCard(_, Some(CardSelection::OwnCharacter(i))) => {
                 html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
             }
+            PlayerAction::PlayCard(_, Some(CardSelection::OwnSummon(summon_id))) => {
+                html! { <span class="own-summon">{summon_id.get_status().name}</span> }
+            }
+            PlayerAction::PlayCard(_, Some(CardSelection::OpponentSummon(summon_id))) => {
+                html! { <span class="opp-summon">{summon_id.get_status().name}</span> }
+            }
             PlayerAction::SwitchCharacter(i) | PlayerAction::PostDeathSwitch(i) => {
                 html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
             }
