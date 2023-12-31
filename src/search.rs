@@ -6,7 +6,7 @@ use yew_agent::*;
 
 use gitcg_sim::{
     game_tree_search::*,
-    mcts::{policy::DefaultEvalPolicy, MCTSConfig, MCTS, CpuctConfig},
+    mcts::{policy::{DefaultEvalPolicy, RuleBasedPuct}, MCTSConfig, MCTS, CpuctConfig},
     training::policy::PolicyNetwork,
     types::game_state::*,
 };
@@ -25,12 +25,12 @@ pub struct WorkerMessage {
 
 pub struct SearchWorker {
     pub link: WorkerLink<Self>,
-    pub search: MCTS<G, DefaultEvalPolicy, PolicyNetwork>,
+    pub search: MCTS<G, DefaultEvalPolicy, RuleBasedPuct>,
     pub search_steps: Option<SearchSteps>,
     pub solution: Option<SearchResult<G>>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SearchAction {
     Start {
         maximize_player: PlayerId,
@@ -69,7 +69,7 @@ const DEFAULT_CONFIG: MCTSConfig = {
         random_playout_iters,
         random_playout_cutoff,
         random_playout_bias,
-        policy_bias: Some(10.0),
+        policy_bias: Some(5.0),
         debug,
         limits: Some(SearchLimits {
             max_time_ms: Some(TIME_LIMIT_MS),
@@ -77,6 +77,7 @@ const DEFAULT_CONFIG: MCTSConfig = {
         }),
     }
 };
+
 
 impl Worker for SearchWorker {
     type Reach = Public<Self>;
@@ -97,7 +98,7 @@ impl Worker for SearchWorker {
             search: MCTS::new_with_eval_policy_and_selection_policy(
                 DEFAULT_CONFIG,
                 Default::default(),
-                PolicyNetwork::new(),
+                RuleBasedPuct::default(),
             ),
             search_steps: None,
             solution: None,
@@ -125,77 +126,8 @@ impl Worker for SearchWorker {
                 self.solution = None;
                 self.link.respond(id, SearchReturn::default());
             }
-            SearchAction::Step => 'a: {
-                let Some(mut search_steps) = self.search_steps.clone() else {
-                    break 'a;
-                };
-                if search_steps.steps_remaining == 0 {
-                    if let Some((_, root)) = self.search.root {
-                        if let Some((root, initial_state)) = self
-                            .search
-                            .tree
-                            .get(root)
-                            .map(|root_node| (root_node.token(), root_node.data.state.clone()))
-                        {
-                            gloo::console::log!(format!(
-                                "Search Finish: Principal Variation = {:?}",
-                                self.solution.as_ref().map(|s| s
-                                    .pv
-                                    .into_iter()
-                                    .map(|&action| describe_action_with_player(
-                                        &initial_state,
-                                        action
-                                    ))
-                                    .collect::<Vec<_>>())
-                            ));
-                            gloo::console::log!(
-                                "MCTS Tree: ",
-                                JsValue::from_serde(&self.search.dump_tree(root, 4, &|action| {
-                                    describe_action_with_player(&initial_state, action)
-                                }))
-                                .unwrap_or_default()
-                            );
-                            gloo::console::log!("-------------------");
-                        }
-                    }
-                    self.link.respond(
-                        id,
-                        SearchReturn(true, self.solution.clone(), search_steps.total_time_ms),
-                    );
-                    break 'a;
-                }
-
-                let t0 = Instant::now();
-                let mut res = self
-                    .search
-                    .search(&search_steps.game_state, search_steps.maximize_player);
-                gloo::console::log!(format!("Step {:?}", res.pv.head()));
-                gloo::console::log!(format!(
-                    "Root: {}",
-                    self.search
-                        .root
-                        .and_then(|(_, r)| self.search.tree.get(r))
-                        .map(|d| format!("{:?}", d.data))
-                        .unwrap_or_default()
-                ));
-                let dt = (Instant::now() - t0).as_nanos();
-
-                let res1 = self.solution.clone().unwrap_or_default();
-
-                search_steps.total_time_ms += dt;
-                search_steps.steps_remaining -= 1;
-                let t = search_steps.total_time_ms;
-                {
-                    res.counter.add_in_place(&res1.counter);
-                    if res1.pv.len() >= res.pv.len() {
-                        res.pv = res1.pv;
-                        res.eval = res1.eval;
-                    }
-                }
-                self.search_steps = Some(search_steps);
-                self.solution = Some(res);
-                self.link
-                    .respond(id, SearchReturn(false, self.solution.clone(), t));
+            SearchAction::Step => {
+                self.step(id)
             }
             SearchAction::SetConfig(c) => {
                 self.search.config = c;
@@ -211,5 +143,83 @@ impl Worker for SearchWorker {
 
     fn resource_path_is_relative() -> bool {
         true
+    }
+}
+
+impl SearchWorker {
+    fn step(&mut self, id: HandlerId) {
+        let Some(mut search_steps) = self.search_steps.clone() else {
+            return
+        };
+        if search_steps.steps_remaining == 0 {
+            if let Some((_, root)) = self.search.root {
+                gloo::console::log!("root");
+                if let Some((root, initial_state)) = self
+                    .search
+                    .tree
+                    .get(root)
+                    .map(|root_node| (root_node.token(), root_node.data.state.clone()))
+                {
+                    gloo::console::log!(format!(
+                        "Search Finish: Principal Variation = {:?}",
+                        self.solution.as_ref().map(|s| s
+                            .pv
+                            .into_iter()
+                            .map(|&action| describe_action_with_player(
+                                &initial_state,
+                                action
+                            ))
+                            .collect::<Vec<_>>())
+                    ));
+                    gloo::console::log!(
+                        "MCTS Tree: ",
+                        JsValue::from_serde(&self.search.dump_tree(root, 4, &|action| {
+                            describe_action_with_player(&initial_state, action)
+                        }))
+                        .unwrap_or_default()
+                    );
+                    gloo::console::log!("-------------------");
+                }
+            }
+            self.link.respond(
+                id,
+                SearchReturn(true, self.solution.clone(), search_steps.total_time_ms),
+            );
+            return;
+        }
+
+        let t0 = Instant::now();
+        gloo::console::log!(format!("Start time = {t0:?}"));
+        let mut res = self
+            .search
+            .search(&search_steps.game_state, search_steps.maximize_player);
+        gloo::console::log!(format!("Step {:?}", res.pv.head()));
+        gloo::console::log!(format!(
+            "Root: {}",
+            self.search
+                .root
+                .and_then(|(_, r)| self.search.tree.get(r))
+                .map(|d| format!("{:?}", d.data))
+                .unwrap_or_default()
+        ));
+        let dt = (Instant::now() - t0).as_nanos();
+        gloo::console::log!(format!("Time delta (ns) = {dt:?}"));
+
+        let res1 = self.solution.clone().unwrap_or_default();
+
+        search_steps.total_time_ms += dt;
+        search_steps.steps_remaining -= 1;
+        let t = search_steps.total_time_ms;
+        {
+            res.counter.add_in_place(&res1.counter);
+            if res1.pv.len() >= res.pv.len() {
+                res.pv = res1.pv;
+                res.eval = res1.eval;
+            }
+        }
+        self.search_steps = Some(search_steps);
+        self.solution = Some(res);
+        self.link
+            .respond(id, SearchReturn(false, self.solution.clone(), t));
     }
 }

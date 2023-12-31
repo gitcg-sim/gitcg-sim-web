@@ -548,7 +548,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                                                 </button>
                                             </td>
                                             <td>
-                                                {format!("{:?}, {:?}", char.elem, char.faction)}
+                                                {format!("{}, {}", char.elem, char.faction)}
                                             </td>
                                             <td></td>
                                         </tr>
@@ -572,7 +572,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                                                 </button>
                                             </td>
                                             <td>
-                                                {format!("{:?}", card.card_type)}
+                                                {format!("{}", card.card_type)}
                                             </td>
                                             <td>
                                                 <CostInfo cost={card.cost} />

@@ -122,6 +122,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "constdefault"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb33faf09400f1adbf20825f086096d22e44d97f99f706a2fbf18618352f9370"
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -376,6 +382,7 @@ version = "0.1.0"
 dependencies = [
  "atree",
  "bitfield",
+ "constdefault",
  "enum-map",
  "enum-map-derive 0.3.0",
  "enumset",

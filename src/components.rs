@@ -199,7 +199,7 @@ pub fn char_part(props: &CharacterProps) -> Html {
                                             let status = status_id.get_status();
                                             html! {
                                                 <li class={format!("status-equip equip-slot-{slot:?}")}>
-                                                    {format!("{:?}: ", slot)}
+                                                    {format!("{}: ", slot)}
                                                     {status.name}
                                                     {" "}
                                                     <StatusInfo {status} {state} compact={true} />
