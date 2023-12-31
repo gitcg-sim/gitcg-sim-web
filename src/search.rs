@@ -6,7 +6,7 @@ use yew_agent::*;
 
 use gitcg_sim::{
     game_tree_search::*,
-    mcts::{policy::DefaultEvalPolicy, MCTSConfig, MCTS},
+    mcts::{policy::DefaultEvalPolicy, MCTSConfig, MCTS, CpuctConfig},
     training::policy::PolicyNetwork,
     types::game_state::*,
 };
@@ -56,20 +56,20 @@ pub struct SearchSteps {
 const TIME_LIMIT_MS: u128 = 500;
 
 const DEFAULT_CONFIG: MCTSConfig = {
-    let c = 2.0;
     let tt_size_mb = 32;
     let parallel = false;
     let random_playout_iters = 10;
     let random_playout_cutoff = 20;
-    let random_playout_bias = Some(10.0);
+    let random_playout_bias = Some(50.0);
     let debug = false;
     MCTSConfig {
-        c,
+        cpuct: CpuctConfig::STANDARD,
         tt_size_mb,
         parallel,
         random_playout_iters,
         random_playout_cutoff,
         random_playout_bias,
+        policy_bias: Some(10.0),
         debug,
         limits: Some(SearchLimits {
             max_time_ms: Some(TIME_LIMIT_MS),
@@ -141,8 +141,8 @@ impl Worker for SearchWorker {
                                 "Search Finish: Principal Variation = {:?}",
                                 self.solution.as_ref().map(|s| s
                                     .pv
-                                    .clone()
-                                    .map(|action| describe_action_with_player(
+                                    .into_iter()
+                                    .map(|&action| describe_action_with_player(
                                         &initial_state,
                                         action
                                     ))
