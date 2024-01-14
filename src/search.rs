@@ -4,11 +4,13 @@ use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use yew_agent::*;
 
-use gitcg_sim::{
-    game_tree_search::*,
-    mcts::{policy::{DefaultEvalPolicy, RuleBasedPuct}, MCTSConfig, MCTS, CpuctConfig},
-    training::policy::PolicyNetwork,
-    types::game_state::*,
+use gitcg_sim::prelude::*;
+use gitcg_sim_search::{
+    mcts::{
+        policy::{DefaultEvalPolicy, RuleBasedPuct},
+        CpuctConfig, MCTSConfig, MCTS,
+    },
+    prelude::*,
 };
 
 use serde::{Deserialize, Serialize};
@@ -78,7 +80,6 @@ const DEFAULT_CONFIG: MCTSConfig = {
     }
 };
 
-
 impl Worker for SearchWorker {
     type Reach = Public<Self>;
 
@@ -98,7 +99,7 @@ impl Worker for SearchWorker {
             search: MCTS::new_with_eval_policy_and_selection_policy(
                 DEFAULT_CONFIG,
                 Default::default(),
-                RuleBasedPuct::default(),
+                RuleBasedPuct,
             ),
             search_steps: None,
             solution: None,
@@ -126,9 +127,7 @@ impl Worker for SearchWorker {
                 self.solution = None;
                 self.link.respond(id, SearchReturn::default());
             }
-            SearchAction::Step => {
-                self.step(id)
-            }
+            SearchAction::Step => self.step(id),
             SearchAction::SetConfig(c) => {
                 self.search.config = c;
             }
@@ -149,7 +148,7 @@ impl Worker for SearchWorker {
 impl SearchWorker {
     fn step(&mut self, id: HandlerId) {
         let Some(mut search_steps) = self.search_steps.clone() else {
-            return
+            return;
         };
         if search_steps.steps_remaining == 0 {
             if let Some((_, root)) = self.search.root {
@@ -165,10 +164,7 @@ impl SearchWorker {
                         self.solution.as_ref().map(|s| s
                             .pv
                             .into_iter()
-                            .map(|&action| describe_action_with_player(
-                                &initial_state,
-                                action
-                            ))
+                            .map(|&action| describe_action_with_player(&initial_state, action))
                             .collect::<Vec<_>>())
                     ));
                     gloo::console::log!(

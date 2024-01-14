@@ -6,12 +6,8 @@ use std::{
 };
 
 use gitcg_sim::{
-    deck::*,
-    game_tree_search::{Game, *},
-    ids::*,
-    types::{dice_counter::*, enums::*, game_state::*, input::*, nondet::*},
+    deck::*, ids::*, prelude::*, rand::prelude::*, smallvec::smallvec, types::enums::Dice,
 };
-use gitcg_sim::{rand::prelude::*, smallvec::smallvec};
 use gloo_storage::{LocalStorage, Storage};
 use yew::prelude::*;
 use yew_agent::Bridged;

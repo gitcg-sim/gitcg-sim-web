@@ -25,6 +25,7 @@ yew = { version = "0.20.0", features = ["csr"] }
 yew-agent = { version = "0.2.0" }
 instant = { version = "0.1", features = ["stdweb", "wasm-bindgen"] }
 gitcg_sim = { version = "0.1.0", path = "../GITCGSim", features = ["wasm"] }
+gitcg_sim_search = { version = "0.1.0", path = "../GITCGSim/gitcg_sim_search", features = ["wasm"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 bincode = { version = "*" }
 js-sys = { version = "*" }
