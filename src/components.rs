@@ -1,11 +1,7 @@
 use std::rc::Rc;
 
 use crate::app;
-use gitcg_sim::prelude::{
-    *,
-    tcg_model::*,
-    card_defs::Status,
-};
+use gitcg_sim::prelude::{card_defs::Status, tcg_model::*, *};
 use yew::prelude::*;
 
 #[derive(Properties)]

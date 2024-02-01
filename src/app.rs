@@ -6,8 +6,8 @@ use std::{
 };
 
 use gitcg_sim::{
-    prelude::{*, tcg_model::Dice},
     deck::sample_deck,
+    prelude::{tcg_model::Dice, *},
     rand::prelude::*,
     smallvec::smallvec,
 };

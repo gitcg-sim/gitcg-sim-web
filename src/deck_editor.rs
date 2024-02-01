@@ -1,6 +1,9 @@
 use std::{collections::HashMap, rc::Rc};
 
-use gitcg_sim::{enum_map::Enum, prelude::{Decklist, *}};
+use gitcg_sim::{
+    enum_map::Enum,
+    prelude::{Decklist, *},
+};
 use gloo::storage::LocalStorage;
 use gloo::timers::callback::Interval;
 use gloo_storage::Storage;
