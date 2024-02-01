@@ -1,13 +1,10 @@
 use std::rc::Rc;
 
 use crate::app;
-use gitcg_sim::{
-    ids::*,
-    types::{
-        card_defs::Status,
-        enums::{Element, EquipSlot},
-        game_state::*,
-    },
+use gitcg_sim::prelude::{
+    *,
+    tcg_model::*,
+    card_defs::Status,
 };
 use yew::prelude::*;
 

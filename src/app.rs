@@ -6,7 +6,10 @@ use std::{
 };
 
 use gitcg_sim::{
-    deck::*, ids::*, prelude::*, rand::prelude::*, smallvec::smallvec, types::enums::Dice,
+    prelude::{*, tcg_model::Dice},
+    deck::sample_deck,
+    rand::prelude::*,
+    smallvec::smallvec,
 };
 use gloo_storage::{LocalStorage, Storage};
 use yew::prelude::*;

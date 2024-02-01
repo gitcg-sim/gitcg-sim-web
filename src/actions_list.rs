@@ -1,4 +1,4 @@
-use gitcg_sim::{ids::*, prelude::*, types::card_defs::Cost};
+use gitcg_sim::prelude::{*, card_defs::Cost};
 use yew::prelude::*;
 
 use crate::app::{AppAction, AppState, GameStateProp};
