@@ -73,14 +73,14 @@ pub fn action_name(props: &ActionProps) -> Html {
             PlayerAction::CastSkill(skill_id) => {
                 html! {
                     <span class="action action-cast-skill" title="Cast Skill">
-                        {skill_id.get_skill().name}
+                        {skill_id.skill().name}
                     </span>
                 }
             }
             PlayerAction::PlayCard(card_id, _) => {
                 html! {
                     <span class="action action-play-card" title="Play Card">
-                        <span class="card-name">{card_id.get_card().name}</span>
+                        <span class="card-name">{card_id.card().name}</span>
                     </span>
                 }
             }
@@ -88,7 +88,7 @@ pub fn action_name(props: &ActionProps) -> Html {
                 html! {
                     <span class="action action-elemental-tuning" title="Elemental Tuning">
                         {"ET: "}
-                        <span class="card-name">{card_id.get_card().name}</span>
+                        <span class="card-name">{card_id.card().name}</span>
                     </span>
                 }
             }
@@ -105,13 +105,7 @@ pub fn action_name(props: &ActionProps) -> Html {
 
 #[function_component(ActionTarget)]
 pub fn action_target(props: &ActionProps) -> Html {
-    let get_char_name = |player_id, i| {
-        props
-            .game_state
-            .get_player(player_id)
-            .get_character_card(i)
-            .name
-    };
+    let get_char_name = |player_id, i| props.game_state.player(player_id).character_card(i).name;
 
     match props.action {
         Input::FromPlayer(player_id, act) => match act {
@@ -119,10 +113,10 @@ pub fn action_target(props: &ActionProps) -> Html {
                 html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
             }
             PlayerAction::PlayCard(_, Some(CardSelection::OwnSummon(summon_id))) => {
-                html! { <span class="own-summon">{summon_id.get_status().name}</span> }
+                html! { <span class="own-summon">{summon_id.status().name}</span> }
             }
             PlayerAction::PlayCard(_, Some(CardSelection::OpponentSummon(summon_id))) => {
-                html! { <span class="opp-summon">{summon_id.get_status().name}</span> }
+                html! { <span class="opp-summon">{summon_id.status().name}</span> }
             }
             PlayerAction::SwitchCharacter(i) | PlayerAction::PostDeathSwitch(i) => {
                 html! { <span class="target-char">{get_char_name(player_id, i)}</span> }
@@ -159,8 +153,8 @@ pub fn cost_info(props: &CostInfoProps) -> Html {
             {cost.elem_cost.map(|(e, c)|
                 html! {
                     <span
-                        class={format!("cost cost-elem elem-{}", e.get_name())}
-                        title={format!("Elemental cost: {}", e.get_name())}
+                        class={format!("cost cost-elem elem-{}", e.name())}
+                        title={format!("Elemental cost: {}", e.name())}
                     >{c}</span>
                 }
             )}

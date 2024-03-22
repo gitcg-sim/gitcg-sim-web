@@ -186,13 +186,13 @@ lazy_static! {
             if RESTRICTED_CARDS.contains(&card_id) {
                 continue;
             }
-            cards.insert(card_id.get_card().name, card_id);
+            cards.insert(card_id.card().name, card_id);
         }
         cards
     };
     pub static ref CARDS_LIST: Vec<(&'static str, CardId)> = {
         let mut v: Vec<_> = CARDS.iter().map(|(&a, &b)| (a, b)).collect();
-        v.sort_by_key(|(card_name, card_id)| (card_id.get_card().card_type, *card_name));
+        v.sort_by_key(|(card_name, card_id)| (card_id.card().card_type, *card_name));
         v
     };
     pub static ref CHARS: HashMap<&'static str, CharId> = {
@@ -200,7 +200,7 @@ lazy_static! {
         let mut chars = HashMap::with_capacity(n);
         for i in 0..n {
             let char_id = CharId::from_usize(i);
-            chars.insert(char_id.get_char_card().name, char_id);
+            chars.insert(char_id.char_card().name, char_id);
         }
         chars
     };
@@ -285,7 +285,7 @@ impl Reducible for DeckEditorState {
                     let count = next.cards.iter().filter(|&&c| c == card_id).count();
                     if count < 2 {
                         next.cards.push(card_id);
-                        next.cards.sort_by_key(|c| c.get_card().name);
+                        next.cards.sort_by_key(|c| c.card().name);
                     }
                 }
             }
@@ -380,7 +380,7 @@ pub fn deck_selector(
                 {for deck_names.iter().map(|name| {
                     let deck_summary = if let Some(decklist) = decks.decks.get(name) {
                         let n = decklist.cards.len();
-                        let char_names: Vec<_> = decklist.characters.iter().map(|c| c.get_char_card().name).collect();
+                        let char_names: Vec<_> = decklist.characters.iter().map(|c| c.char_card().name).collect();
                         let chars = char_names.join(", ");
                         format!("{name} | {chars} | {n}")
                     } else {
@@ -476,7 +476,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                                         <tr>
                                             <td>
                                                 <button title="Remove character from deck" {onclick}>
-                                                    {char_id.get_char_card().name}
+                                                    {char_id.char_card().name}
                                                 </button>
                                             </td>
                                         </tr>
@@ -502,7 +502,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                                         <tr>
                                             <td>
                                                 <button title="Remove card from deck" {onclick}>
-                                                    {card_id.get_card().name}
+                                                    {card_id.card().name}
                                                 </button>
                                             </td>
                                         </tr>
@@ -537,7 +537,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                             {for CHARS_LIST.iter().map({
                                 let state = state.clone();
                                 move |(name, char_id)| {
-                                    let char = char_id.get_char_card();
+                                    let char = char_id.char_card();
                                     let state = state.clone();
                                     let onclick = Callback::from(move |_| {
                                         state.dispatch(DeckEditorAction::AddChar(*char_id))
@@ -561,7 +561,7 @@ pub fn deck_editor(_: &DeckEditorProps) -> Html {
                             {for CARDS_LIST.iter().map({
                                 let state = state.clone();
                                 move |(name, card_id)| {
-                                    let card = card_id.get_card();
+                                    let card = card_id.card();
                                     let state = state.clone();
                                     let onclick = Callback::from(move |_| {
                                         state.dispatch(DeckEditorAction::AddCard(*card_id))

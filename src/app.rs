@@ -112,7 +112,7 @@ fn default_game_state() -> G {
         smallvec![CharId::Mona, CharId::Fischl, CharId::Collei],
         sample_deck(),
     );
-    new_standard_game(&decklist1, &decklist2, rand1)
+    new_standard_game((&decklist1, &decklist2).into(), rand1)
 }
 
 const RANDOM_SEED_KEY: &str = "random_seed";
@@ -203,15 +203,15 @@ pub fn app() -> Html {
             let (decklist1, decklist2) = r.as_ref();
             let rng = SmallRng::seed_from_u64(LocalStorage::get(RANDOM_SEED_KEY).unwrap_or(100));
             app.dispatch(AppAction::SetGameState(
-                new_standard_game(decklist1, decklist2, rng).into(),
+                new_standard_game((decklist1, decklist2).into(), rng).into(),
             ));
         },
         app.clone(),
     );
 
-    let active_player = app.game_state.game_state.get_active_player();
+    let active_player = app.game_state.game_state.active_player();
     let to_move = app.game_state.to_move();
-    let dice = active_player.map(|p| p.dice);
+    let dice = active_player.map(|p| p.dice_counter());
     html! {
         <main>
             <h1>{ "GITCGSim Web" }</h1>
@@ -260,8 +260,8 @@ fn dice_list(props: &DiceListProps) -> Html {
                     match d {
                         Dice::Omni => html! { <span class="dice dice-omni" title={"Omni"}>{"O"}</span> },
                         Dice::Elem(e) => html! {
-                            <span class={format!("dice dice-elem elem-{e:?}")} title={e.get_name()}>
-                                {e.get_name().chars().next()}
+                            <span class={format!("dice dice-elem elem-{e:?}")} title={e.name()}>
+                                {e.name().chars().next()}
                             </span>
                         }
                     }
@@ -338,19 +338,19 @@ pub fn describe_action_with_player(game_state: &G, action: Input) -> String {
 }
 
 pub fn describe_action(game_state: &G, action: Input) -> String {
-    let card_name = |card_id: CardId| card_id.get_card().name;
-    let char_name = |char_id: CharId| char_id.get_char_card().name;
+    let card_name = |card_id: CardId| card_id.card().name;
+    let char_name = |char_id: CharId| char_id.char_card().name;
     let Input::FromPlayer(player_id, act) = action else {
         return "\u{2205}".to_string();
     };
-    let get_char = |i: u8| &game_state.game_state.get_player(player_id).char_states[i];
+    let get_char = |i: u8| &game_state.game_state.player(player_id).char_states()[i];
     match act {
         PlayerAction::EndRound => "End Round".to_string(),
         PlayerAction::PlayCard(card_id, target) => {
             let target_part = target.map(|t| match t {
-                CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id).to_string(),
-                CardSelection::OwnSummon(s) => format!("Own Summon({})", s.get_status().name),
-                CardSelection::OpponentSummon(s) => format!("Opp. Summon({})", s.get_status().name),
+                CardSelection::OwnCharacter(i) => char_name(get_char(i).char_id()).to_string(),
+                CardSelection::OwnSummon(s) => format!("Own Summon({})", s.status().name),
+                CardSelection::OpponentSummon(s) => format!("Opp. Summon({})", s.status().name),
             });
             if let Some(t) = target_part {
                 format!("Card({}, {t})", card_name(card_id))
@@ -359,9 +359,9 @@ pub fn describe_action(game_state: &G, action: Input) -> String {
             }
         }
         PlayerAction::ElementalTuning(card_id) => format!("ET({})", card_name(card_id)),
-        PlayerAction::CastSkill(skill_id) => format!("Cast({})", skill_id.get_skill().name),
+        PlayerAction::CastSkill(skill_id) => format!("Cast({})", skill_id.skill().name),
         PlayerAction::SwitchCharacter(i) | PlayerAction::PostDeathSwitch(i) => {
-            format!("Switch({})", char_name(get_char(i).char_id))
+            format!("Switch({})", char_name(get_char(i).char_id()))
         }
     }
 }
